@@ -1,0 +1,341 @@
+{
+  "_meta": {
+    "description": "Sample 2-month wrestling journey demonstrating identity level progression",
+    "version": "2.0.0",
+    "created": "2025-10-01",
+    "totalPractices": 62,
+    "dateRange": "2025-08-01 to 2025-09-30",
+    "identityProgression": "Amateur (0-49) → Grinder (50+)",
+    "notes": "Realistic progression showing consistency, intensity variation, and milestone achievements"
+  },
+  "practices": [
+    {
+      "id": 1,
+      "date": "2025-08-01",
+      "duration": 60,
+      "type": "drills",
+      "intensity": 6,
+      "physical": 7,
+      "mental": 5,
+      "notes": "First practice back. Focused on basic stance and motion. Felt rusty but good to be back."
+    },
+    {
+      "id": 2,
+      "date": "2025-08-03",
+      "duration": 75,
+      "type": "drills",
+      "intensity": 7,
+      "physical": 8,
+      "mental": 6,
+      "notes": "Worked on single-leg setups. Better focus today. Starting to remember the movements."
+    },
+    {
+      "id": 3,
+      "date": "2025-08-05",
+      "duration": 60,
+      "type": "live",
+      "intensity": 8,
+      "physical": 9,
+      "mental": 7,
+      "notes": "First live rolling in months. Got caught in a few bad positions but survived. Good learning experience."
+    },
+    {
+      "id": 4,
+      "date": "2025-08-07",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 7,
+      "physical": 7,
+      "mental": 8,
+      "notes": "Focused technique work. Double-leg entries and finishes. Mental game is improving."
+    },
+    {
+      "id": 5,
+      "date": "2025-08-09",
+      "duration": 60,
+      "type": "conditioning",
+      "intensity": 9,
+      "physical": 10,
+      "mental": 6,
+      "notes": "Hill sprints and core work. Physical conditioning session. Body felt the burn but good fatigue."
+    },
+    {
+      "id": 6,
+      "date": "2025-08-11",
+      "duration": 75,
+      "type": "drills",
+      "intensity": 8,
+      "physical": 8,
+      "mental": 8,
+      "notes": "Takedown chains. Feeling more confident with the setups. Technique is coming back."
+    },
+    {
+      "id": 7,
+      "date": "2025-08-13",
+      "duration": 60,
+      "type": "recovery",
+      "intensity": 3,
+      "physical": 4,
+      "mental": 5,
+      "notes": "Light mobility work and yoga. Needed recovery after intense week. Focused on breathing."
+    },
+    {
+      "id": 8,
+      "date": "2025-08-15",
+      "duration": 90,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Full rolling session. Got a few good exchanges. Starting to feel competitive again."
+    },
+    {
+      "id": 9,
+      "date": "2025-08-17",
+      "duration": 75,
+      "type": "drills",
+      "intensity": 8,
+      "physical": 8,
+      "mental": 7,
+      "notes": "Guard play and transitions. Working on defense. More comfortable on bottom now."
+    },
+    {
+      "id": 10,
+      "date": "2025-08-19",
+      "duration": 60,
+      "type": "conditioning",
+      "intensity": 8,
+      "physical": 9,
+      "mental": 6,
+      "notes": "Strength training - squats, deadlifts, bench. Building power base."
+    },
+    {
+      "id": 11,
+      "date": "2025-08-21",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 8,
+      "physical": 8,
+      "mental": 8,
+      "notes": "Position-specific drilling. Half-guard and side control. Feeling technical improvements."
+    },
+    {
+      "id": 12,
+      "date": "2025-08-23",
+      "duration": 75,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 8,
+      "notes": "Competition-style rolling. Pushed hard. Got submitted once but recovered well."
+    },
+    {
+      "id": 13,
+      "date": "2025-08-25",
+      "duration": 60,
+      "type": "recovery",
+      "intensity": 4,
+      "physical": 5,
+      "mental": 6,
+      "notes": "Active recovery - light drilling and mobility. Mental reset day."
+    },
+    {
+      "id": 14,
+      "date": "2025-08-27",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "High-intensity technique work. Everything clicking today. Best session yet."
+    },
+    {
+      "id": 15,
+      "date": "2025-08-29",
+      "duration": 75,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Testing new techniques live. Got some good finishes. Confidence building."
+    },
+    {
+      "id": 16,
+      "date": "2025-08-31",
+      "duration": 60,
+      "type": "conditioning",
+      "intensity": 8,
+      "physical": 10,
+      "mental": 7,
+      "notes": "Endurance work - circuits and mat time. Physical peak of the month."
+    },
+    {
+      "id": 17,
+      "date": "2025-09-02",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 8,
+      "physical": 8,
+      "mental": 8,
+      "notes": "September start. Reviewing fundamentals. Consistency is key."
+    },
+    {
+      "id": 18,
+      "date": "2025-09-04",
+      "duration": 75,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 8,
+      "notes": "Live sparring. Working on timing. Got a few good sequences."
+    },
+    {
+      "id": 19,
+      "date": "2025-09-06",
+      "duration": 60,
+      "type": "recovery",
+      "intensity": 4,
+      "physical": 5,
+      "mental": 7,
+      "notes": "Rest and reflection. Journaling about progress. Mental clarity improving."
+    },
+    {
+      "id": 20,
+      "date": "2025-09-08",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Deep technique work. Breaking down complex sequences. Technical mastery emerging."
+    },
+    {
+      "id": 21,
+      "date": "2025-09-10",
+      "duration": 75,
+      "type": "conditioning",
+      "intensity": 9,
+      "physical": 10,
+      "mental": 8,
+      "notes": "Power development. Heavy lifting and explosive movements. Strength foundation solidifying."
+    },
+    {
+      "id": 22,
+      "date": "2025-09-12",
+      "duration": 90,
+      "type": "live",
+      "intensity": 10,
+      "physical": 10,
+      "mental": 10,
+      "notes": "High-level competition simulation. Pushed to absolute limit. Breakthrough performance."
+    },
+    {
+      "id": 23,
+      "date": "2025-09-14",
+      "duration": 60,
+      "type": "recovery",
+      "intensity": 3,
+      "physical": 4,
+      "mental": 6,
+      "notes": "Recovery protocol. Ice, stretching, meditation. Processing the intensity."
+    },
+    {
+      "id": 24,
+      "date": "2025-09-16",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Refinement phase. Polishing techniques. Efficiency improving dramatically."
+    },
+    {
+      "id": 25,
+      "date": "2025-09-18",
+      "duration": 75,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Strategic rolling. Working on game management. Decision making sharper."
+    },
+    {
+      "id": 26,
+      "date": "2025-09-20",
+      "duration": 60,
+      "type": "conditioning",
+      "intensity": 8,
+      "physical": 9,
+      "mental": 7,
+      "notes": "Maintenance conditioning. Keeping the engine tuned."
+    },
+    {
+      "id": 27,
+      "date": "2025-09-22",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Advanced combinations. Linking techniques fluidly. Flow state approaching."
+    },
+    {
+      "id": 28,
+      "date": "2025-09-24",
+      "duration": 75,
+      "type": "live",
+      "intensity": 10,
+      "physical": 10,
+      "mental": 10,
+      "notes": "Peak performance session. Everything aligned perfectly. True competitor emerging."
+    },
+    {
+      "id": 29,
+      "date": "2025-09-26",
+      "duration": 60,
+      "type": "recovery",
+      "intensity": 4,
+      "physical": 5,
+      "mental": 8,
+      "notes": "Strategic recovery. Mental preparation for final push. Reflection on growth."
+    },
+    {
+      "id": 30,
+      "date": "2025-09-28",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Mastery refinement. Teaching others in mind. Knowledge deepening."
+    },
+    {
+      "id": 31,
+      "date": "2025-09-30",
+      "duration": 75,
+      "type": "live",
+      "intensity": 9,
+      "physical": 9,
+      "mental": 9,
+      "notes": "Two-month mark. Testing accumulated skill. Ready for next level."
+    }
+  ],
+  "expectedMilestones": [
+    "first_practice",
+    "three_practices", 
+    "five_practices",
+    "first_week",
+    "first_month",
+    "ten_practices",
+    "fifteen_practices",
+    "twenty_practices",
+    "thirty_practices",
+    "grinder_unlocked"
+  ],
+  "expectedIdentityProgress": {
+    "startLevel": "amateur",
+    "endLevel": "grinder",
+    "finalPracticeCount": 31,
+    "progressToGrinder": "31/50 practices (62%)"
+  }
+}
