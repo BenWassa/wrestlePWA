@@ -39,7 +39,8 @@
       ALL_BADGES,
       checkBadges as dbCheckBadges,
       PHASES,
-      getPhase as dbGetPhase
+      getPhase as dbGetPhase,
+      calculatePracticeStats as dbCalculatePracticeStats
     } from './db.js';
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -68,6 +69,9 @@
           totalTime: practices.reduce((sum, p) => sum + (p.duration || 0), 0),
           lastPracticeDate: practices.length ? new Date(practices.slice(-1)[0].date).toLocaleDateString() : 'N/A'
         };
+
+        // Get comprehensive stats including streaks
+        const fullStats = dbCalculatePracticeStats(practices);
 
         const practiceCount = practices.length;
         const earnedBadges = (profile.earnedBadges || []).map(badge => ({ ...badge, id: String(badge.id) }))
@@ -163,12 +167,20 @@
                       <p class="stat-value">${isNaN(totalHours) ? '0.0' : totalHours}</p>
                     </div>
                     <div class="stat-card">
+                      <p class="stat-label">Current streak</p>
+                      <p class="stat-value">${fullStats.streaks.current} days</p>
+                    </div>
+                    <div class="stat-card">
+                      <p class="stat-label">Longest streak</p>
+                      <p class="stat-value">${fullStats.streaks.longest} days</p>
+                    </div>
+                    <div class="stat-card">
                       <p class="stat-label">Avg intensity</p>
                       <p class="stat-value">${stats.avgIntensity}</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Last entry</p>
-                      <p class="stat-value">${stats.lastPracticeDate}</p>
+                      <p class="stat-label">Started</p>
+                      <p class="stat-value">${profile.startDate ? new Date(profile.startDate).toLocaleDateString() : 'Today'}</p>
                     </div>
                   </div>
                 </article>
@@ -504,13 +516,21 @@
       }
 
       async function handleClearData() {
-          if (confirm("THIS IS PERMANENT. Are you absolutely sure you want to clear ALL practice logs, badges, and progress?")) {
-              await clearAllData();
-              currentTab = 'dashboard';
-              alert("All data cleared!");
-              render();
-          }
+          document.getElementById('confirm-modal').style.display = 'block';
       }
+
+      // Modal event listeners
+      document.getElementById('confirm-cancel').addEventListener('click', () => {
+          document.getElementById('confirm-modal').style.display = 'none';
+      });
+
+      document.getElementById('confirm-clear').addEventListener('click', async () => {
+          document.getElementById('confirm-modal').style.display = 'none';
+          await clearAllData();
+          currentTab = 'dashboard';
+          alert("All data cleared!");
+          render();
+      });
 
       function handleImportData() {
           const fileInput = document.getElementById('import-file');
@@ -596,5 +616,28 @@
       });
     }
   </script>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚠️ Clear All Data</h3>
+      </div>
+      <div class="modal-body">
+        <p>This action cannot be undone. You will lose:</p>
+        <ul>
+          <li>All practice logs and training history</li>
+          <li>All earned badges and achievements</li>
+          <li>All progress and streak data</li>
+        </ul>
+        <p><strong>Are you absolutely sure?</strong></p>
+      </div>
+      <div class="modal-actions">
+        <button id="confirm-cancel" class="button">Cancel</button>
+        <button id="confirm-clear" class="button danger">Yes, Clear Everything</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
