@@ -1,0 +1,220 @@
+/* --- CSS Variables for Polish and Consistency --- */
+:root {
+  --color-primary: #ea580c; /* Orange Accent */
+  --color-secondary: #f97316; /* Lighter Orange */
+  --color-dark-bg: #111827; /* Very Dark Blue */
+  --color-card-bg: #1f2937; /* Dark Blue-Gray for cards */
+  --color-input-bg: #374151; /* Softer Dark Gray for inputs */
+  --color-text-light: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --color-border: #4b5563;
+  
+  --spacing-unit: 1rem;
+  --border-radius-card: 12px;
+  --border-radius-sm: 6px;
+  --tap-target-min: 48px;
+  --transition-speed: 0.2s;
+}
+
+/* --- Base & Typography --- */
+body {
+  margin: 0;
+  /* Modern, legible font stack */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6; /* Increased line height for readability */
+  color: var(--color-text-light);
+  /* Rich dark background gradient */
+  background: linear-gradient(180deg, var(--color-dark-bg) 0%, #0c1017 100%);
+  min-height: 100vh;
+}
+
+.app {
+  padding: var(--spacing-unit);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: var(--spacing-unit);
+  margin-bottom: calc(2 * var(--spacing-unit));
+  color: var(--color-primary);
+  text-align: center;
+}
+
+/* --- Input Group & Form Elements --- */
+.input-group {
+  margin-bottom: calc(2 * var(--spacing-unit));
+  display: flex;
+  gap: var(--spacing-unit);
+  flex-direction: column; /* Default to stack for mobile */
+}
+
+@media (min-width: 450px) {
+  .input-group {
+    flex-direction: row; /* Side-by-side on wider screens */
+  }
+  .button {
+    margin-top: 0;
+  }
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-light);
+  transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+  flex-grow: 1;
+  font-size: 1rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  /* Focus glow */
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4); 
+}
+
+/* --- Buttons --- */
+.button {
+  min-height: var(--tap-target-min); /* Larger tap target */
+  margin-top: 0.5rem; /* For mobile stacking */
+  /* Gradient background on primary actions */
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  color: var(--color-text-light);
+  font-weight: bold;
+  padding: 0.5rem 1.5rem; 
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: transform var(--transition-speed), opacity var(--transition-speed), box-shadow var(--transition-speed);
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.button:hover:not(:disabled) {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+
+/* --- Practice List (Cards) --- */
+.practice-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.practice-list li {
+  margin-bottom: var(--spacing-unit);
+  padding: var(--spacing-unit);
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius-card); /* Rounded corners */
+  /* Subtle box-shadow for depth */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); 
+  transition: background-color var(--transition-speed), transform var(--transition-speed);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.practice-list li:hover {
+  background-color: #2b394d; /* Subtle hover highlight */
+  transform: translateY(-2px);
+}
+
+.practice-item-text {
+  flex-grow: 1;
+  line-clamp: 2;
+  margin-right: var(--spacing-unit);
+}
+
+.practice-item-date {
+  font-size: 0.9rem;
+  color: var(--color-text-muted); /* Muted grey date */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+
+/* --- Custom Slider Styles (for future use/modularity) --- */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 5px;
+  background: #3f3f46;
+  outline: none;
+  transition: background var(--transition-speed);
+}
+
+input[type="range"]:focus {
+  outline: none;
+  /* Orange accent focus */
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4); 
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  transition: background var(--transition-speed), transform var(--transition-speed);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: none;
+  transition: background var(--transition-speed);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-moz-range-thumb:hover {
+  background: var(--color-secondary);
+  transform: scale(1.1);
+}
+
+
+/* --- Utility Styles --- */
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Hide scrollbar but keep functionality */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
