@@ -227,7 +227,8 @@ export function getPhase(practiceCount) {
     // If we've completed all phases
     if (practiceCount >= PHASES[PHASES.length - 1].goal) {
         currentPhase = PHASES[PHASES.length - 1];
-        nextPhase = PHASES[PHASES.length - 1];
+    // No next phase once the final goal is reached
+    nextPhase = null;
         progress = 100;
     }
     
