@@ -18,15 +18,49 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   
-  <!-- Tailwind CSS from CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- React from CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- Babel Standalone for JSX -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    .app {
+      min-height: 100vh;
+      background-color: #111827;
+      color: white;
+      padding: 1rem;
+    }
+    .title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .input-group {
+      margin-bottom: 1rem;
+    }
+    .input {
+      width: 100%;
+      padding: 0.5rem;
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.25rem;
+      color: white;
+    }
+    .button {
+      margin-top: 0.5rem;
+      background-color: #ea580c;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.25rem;
+      cursor: pointer;
+    }
+    .practice-list li {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background-color: #1f2937;
+      border-radius: 0.25rem;
+    }
+  </style>
   
   <style>
     /* Custom slider styles for dark mode */
@@ -88,9 +122,44 @@
 <body>
   <div id="root"></div>
   
-  <script type="text/babel">
-    // Paste the entire React component code here
-    // (Copy from the wrestling_journey_mvp artifact)
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.getElementById('root');
+      const practices = JSON.parse(localStorage.getItem('practices') || '[]');
+
+      function render() {
+        root.innerHTML = `
+          <div class="min-h-screen bg-gray-900 text-white p-4">
+            <h1 class="text-2xl font-bold mb-4">Wrestling Journey</h1>
+            <div class="mb-4">
+              <input id="practice-input" type="text" placeholder="Log a practice..." class="w-full p-2 bg-gray-800 border border-gray-700 rounded">
+              <button id="add-btn" class="mt-2 bg-orange-600 px-4 py-2 rounded">Add Practice</button>
+            </div>
+            <ul id="practice-list">
+              ${practices.map(p => `<li class="mb-2 p-2 bg-gray-800 rounded">${p.text} - ${new Date(p.date).toLocaleDateString()}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+
+        document.getElementById('add-btn').addEventListener('click', addPractice);
+        document.getElementById('practice-input').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') addPractice();
+        });
+      }
+
+      function addPractice() {
+        const input = document.getElementById('practice-input');
+        const text = input.value.trim();
+        if (text) {
+          practices.push({ id: Date.now(), text, date: new Date().toISOString() });
+          localStorage.setItem('practices', JSON.stringify(practices));
+          input.value = '';
+          render();
+        }
+      }
+
+      render();
+    });
   </script>
 
   <!-- Service Worker Registration -->
