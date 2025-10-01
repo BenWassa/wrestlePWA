@@ -29,7 +29,18 @@
   
   <script type="module">
     // Import all necessary functions from the new db.js module
-    import { getPractices, addPractice as dbAddPractice, deletePractice as dbDeletePractice, getProfile, setProfile, clearAllData } from './db.js';
+    import {
+      getPractices,
+      addPractice as dbAddPractice,
+      deletePractice as dbDeletePractice,
+      getProfile,
+      setProfile,
+      clearAllData,
+      ALL_BADGES,
+      checkBadges as dbCheckBadges,
+      PHASES,
+      getPhase as dbGetPhase
+    } from './db.js';
     
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.getElementById('root');
@@ -38,70 +49,22 @@
       let currentTab = 'dashboard';
 
       // --- JOURNEY DATA & LOGIC ---
-      const PHASES = [
-        { id: 1, name: "The Baseline", goal: 10, description: "Focus on fundamental movement and conditioning. Log 10 practices to establish consistency." },
-        { id: 2, name: "The Grind", goal: 50, description: "Refining core techniques and finding your preferred style. Log 50 total practices." },
-        { id: 3, name: "The Competitor", goal: 100, description: "Peak conditioning, advanced technique chains, and mental preparation. Log 100 total practices." },
-        // ... extend as needed
-      ];
-
-      function getPhase(totalPractices) {
-          let currentPhase = PHASES[0];
-          let nextPhase = null;
-
-          for (let i = 0; i < PHASES.length; i++) {
-              if (totalPractices >= PHASES[i].goal) {
-                  currentPhase = PHASES[i];
-                  if (PHASES[i+1]) {
-                      nextPhase = PHASES[i+1];
-                  }
-              } else if (totalPractices < PHASES[i].goal && !nextPhase) {
-                  nextPhase = PHASES[i];
-              }
-          }
-          const progress = nextPhase ? Math.min(100, (totalPractices / nextPhase.goal) * 100) : 100;
-
-          return { current: currentPhase, next: nextPhase, progress };
-      }
-
-      const ALL_BADGES = [
-          { id: 1, name: 'First Practice', icon: '🏆', check: (p) => p.length >= 1 },
-          { id: 2, name: '10 Practices', icon: '🎖️', check: (p) => p.length >= 10 },
-          { id: 3, name: '50 Practices', icon: '🥇', check: (p) => p.length >= 50 },
-          { id: 4, name: '4+ Rating', icon: '⭐', check: (p) => p.length && (p.reduce((sum, pr) => sum + (pr.intensity || 0), 0) / p.length) >= 4 },
-      ];
-
-      function checkBadges(practices, currentProfile) {
-          let updatedProfile = { ...currentProfile };
-          let changed = false;
-
-          const latestPracticeNum = practices.length;
-
-          ALL_BADGES.forEach(badge => {
-              const isEarned = currentProfile.earnedBadges.some(b => b.id === badge.id);
-              
-              if (!isEarned && badge.check(practices)) {
-                  updatedProfile.earnedBadges.push({
-                      id: badge.id,
-                      earnedDate: new Date().toISOString(),
-                      practiceNumber: latestPracticeNum
-                  });
-                  changed = true;
-                  console.log(`Badge Earned: ${badge.name}`);
-              }
-          });
-          return changed ? updatedProfile : null;
-      }
+      const BADGE_ICONS = {
+        1: '🏆',
+        2: '🎖️',
+        3: '🥇',
+        4: '⭐'
+      };
       
       // --- RENDER FUNCTION ---
       async function render() {
         practices = await getPractices();
         profile = await getProfile();
 
-        const { current: currentPhase, next: nextPhase, progress } = getPhase(practices.length);
-        
+        const { current: currentPhase, next: nextPhase } = dbGetPhase(practices.length);
+
         // Update profile if a badge was earned
-        const updatedProfile = checkBadges(practices, profile);
+        const updatedProfile = dbCheckBadges(practices, profile);
         if (updatedProfile) {
             profile = updatedProfile;
             await setProfile(profile);
@@ -114,158 +77,293 @@
           lastPracticeDate: practices.length ? new Date(practices.slice(-1)[0].date).toLocaleDateString() : 'N/A'
         };
 
+        const earnedBadges = (profile.earnedBadges || []).sort((a, b) => new Date(a.earnedDate) - new Date(b.earnedDate));
+        const latestBadges = earnedBadges.slice(-3).reverse();
+        const nextGoal = nextPhase ? nextPhase.goal : currentPhase.goal;
+        const progressPercent = Math.min(100, Math.max(0, Math.round((practices.length / nextGoal) * 100)));
+        const sessionsRemaining = Math.max(0, nextGoal - practices.length);
+        const sessionsLabel = sessionsRemaining === 1 ? 'session' : 'sessions';
+        const totalHours = (stats.totalTime / 60).toFixed(1);
+        const lastPractice = practices.length ? practices[practices.length - 1] : null;
+
         root.innerHTML = `
           <div class="app">
-            <h1 class="title">Wrestling Journey</h1>
-            
-            <!-- Tab Buttons - Aligned with Truth Doc -->
-            <div class="tabs">
-              <button id="tab-dashboard" class="tab ${currentTab === 'dashboard' ? 'active' : ''}">Dashboard</button>
-              <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}">Log Practice</button>
-              <button id="tab-history" class="tab ${currentTab === 'history' ? 'active' : ''}">History</button>
-              <button id="tab-badges" class="tab ${currentTab === 'badges' ? 'active' : ''}">Badges</button>
-              <button id="tab-guide" class="tab ${currentTab === 'guide' ? 'active' : ''}">Journey Guide</button>
-              <button id="tab-settings" class="tab ${currentTab === 'settings' ? 'active' : ''}">Settings</button>
-            </div>
-            
-            <!-- Dashboard Section -->
-            <div id="section-dashboard" class="section ${currentTab === 'dashboard' ? 'active' : ''}">
-              <h2>Your Journey: ${currentPhase.name}</h2>
-              <p>Next Goal: ${nextPhase ? `${nextPhase.goal} Practices (${nextPhase.name})` : 'Mastery!'}</p>
-              
-              <div class="progress-bar-container">
-                  <div class="progress-bar" style="width: ${progress}%"></div>
+            <header class="hero">
+              <div class="hero-copy">
+                <p class="hero-tag">Pixel 8 ready · Offline · Dark mode only</p>
+                <h1 class="title">Wrestling Journey</h1>
+                <p class="hero-subtitle">Track the grind honestly. Wrestling takes years, consistency wins.</p>
               </div>
-              <p class="progress-label">${practices.length} / ${nextPhase ? nextPhase.goal : practices.length} Practices</p>
+              <button class="button secondary hero-action" id="hero-log-btn">Log today</button>
+            </header>
 
-              <div class="stats">
-                <div class="stat-card"><h3>Total Practices</h3><p>${stats.totalPractices}</p></div>
-                <div class="stat-card"><h3>Avg Intensity</h3><p>⭐ ${stats.avgIntensity}/10</p></div>
-                <div class="stat-card"><h3>Total Time</h3><p>${stats.totalTime} min</p></div>
-              </div>
-            </div>
+            <nav class="tabs" role="tablist">
+              <button id="tab-dashboard" class="tab ${currentTab === 'dashboard' ? 'active' : ''}" role="tab">Dashboard</button>
+              <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}" role="tab">Log</button>
+              <button id="tab-history" class="tab ${currentTab === 'history' ? 'active' : ''}" role="tab">History</button>
+              <button id="tab-badges" class="tab ${currentTab === 'badges' ? 'active' : ''}" role="tab">Badges</button>
+              <button id="tab-guide" class="tab ${currentTab === 'guide' ? 'active' : ''}" role="tab">Guide</button>
+              <button id="tab-settings" class="tab ${currentTab === 'settings' ? 'active' : ''}" role="tab">Settings</button>
+            </nav>
 
-            <!-- Log Practice Section - Structured Input -->
-            <div id="section-log" class="section ${currentTab === 'log' ? 'active' : ''}">
-              <h2>Log a Practice</h2>
-              <form id="practice-form" class="input-group">
-                
-                <div class="form-row form-row-full">
-                  <label for="practice-type">Type:</label>
-                  <select id="practice-type" class="input">
-                      <option value="drills">Drills/Technique</option>
-                      <option value="live">Live Sparring/Rolling</option>
-                      <option value="conditioning">Conditioning/Strength</option>
-                      <option value="competition">Competition</option>
-                  </select>
-                </div>
-                
-                <div class="form-row form-row-full">
-                  <label for="practice-date">Date:</label>
-                  <input id="practice-date" type="date" class="input" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-
-                <div class="form-row form-row-full duration-presets">
-                    <label>Duration Presets (min):</label>
+            <main class="panels">
+              <!-- Dashboard -->
+              <section id="section-dashboard" class="section ${currentTab === 'dashboard' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
                     <div>
-                        <button type="button" class="button preset-btn" data-duration="60">60</button>
-                        <button type="button" class="button preset-btn" data-duration="90">90</button>
-                        <button type="button" class="button preset-btn" data-duration="120">120</button>
+                      <p class="eyebrow">Current Phase</p>
+                      <h2>${currentPhase.name}</h2>
                     </div>
-                </div>
+                    <span class="phase-chip">${stats.totalPractices} logged</span>
+                  </div>
+                  <p class="panel-subtitle">Next milestone: ${nextPhase ? `${nextPhase.goal} practices · ${nextPhase.name}` : 'Mastery — keep sharpening your edge.'}</p>
+                  <div class="progress-summary">
+                    <div class="progress-ring" style="--progress:${progressPercent}%">
+                      <span>${progressPercent}%</span>
+                    </div>
+                    <div class="progress-details">
+                      <p class="progress-count">${practices.length} / ${nextGoal} practices logged</p>
+                      <p class="progress-note">${sessionsRemaining > 0 ? `${sessionsRemaining} more ${sessionsLabel} until ${nextPhase ? nextPhase.name : currentPhase.name}.` : 'You hit this milestone. Stay humble and keep the reps coming.'}</p>
+                      <p class="progress-last">${lastPractice ? `Last logged: ${new Date(lastPractice.date).toLocaleDateString()} · ${lastPractice.type}` : 'You have not logged a practice yet. Start today—no fluff, just work.'}</p>
+                    </div>
+                  </div>
+                  <div class="dashboard-actions">
+                    <button class="button" data-switch-to="log">Add practice</button>
+                    <button class="button ghost" data-switch-to="history">View history</button>
+                  </div>
+                </article>
 
-                <div class="form-row form-row-full">
-                  <label for="practice-duration">Manual Duration (min):</label>
-                  <input id="practice-duration" type="number" min="1" class="input small" placeholder="e.g. 75">
-                </div>
+                <article class="panel">
+                  <div class="panel-header">
+                    <h3>Consistency stats</h3>
+                  </div>
+                  <div class="stats-grid">
+                    <div class="stat-card">
+                      <p class="stat-label">Practices</p>
+                      <p class="stat-value">${stats.totalPractices}</p>
+                    </div>
+                    <div class="stat-card">
+                      <p class="stat-label">Hours logged</p>
+                      <p class="stat-value">${isNaN(totalHours) ? '0.0' : totalHours}</p>
+                    </div>
+                    <div class="stat-card">
+                      <p class="stat-label">Avg intensity</p>
+                      <p class="stat-value">${stats.avgIntensity}</p>
+                    </div>
+                    <div class="stat-card">
+                      <p class="stat-label">Last entry</p>
+                      <p class="stat-value">${stats.lastPracticeDate}</p>
+                    </div>
+                  </div>
+                </article>
 
-                <div class="form-row form-row-slider">
-                  <label for="practice-intensity">Intensity (1-10):</label>
-                  <input id="practice-intensity" type="range" min="1" max="10" value="5" class="input range">
-                  <span id="intensity-value">5</span>
-                </div>
+                <article class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3>Badge shelf</h3>
+                      <p class="panel-subtitle">Badges celebrate volume, consistency, and honest notes.</p>
+                    </div>
+                    <button class="button-link" data-switch-to="badges">See all</button>
+                  </div>
+                  <div class="badge-shelf">
+                    ${latestBadges.length ? latestBadges.map(badge => {
+                      const badgeInfo = ALL_BADGES.find(item => item.id === badge.id);
+                      return `
+                        <div class="badge-token">
+                          <span class="badge-icon">${BADGE_ICONS[badge.id] || '🥋'}</span>
+                          <div class="badge-copy">
+                            <p class="badge-name">${badgeInfo ? badgeInfo.name : 'Badge'}</p>
+                            <p class="badge-meta">Practice #${badge.practiceNumber} · ${new Date(badge.earnedDate).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      `;
+                    }).join('') : '<p class="empty">Log consistently to earn your first badge.</p>'}
+                  </div>
+                </article>
+              </section>
 
-                <div class="form-row form-row-slider">
-                  <label for="practice-physical">Physical Feel (1-5):</label>
-                  <input id="practice-physical" type="range" min="1" max="5" value="3" class="input range">
-                  <span id="physical-value">3</span>
-                </div>
-
-                <div class="form-row form-row-slider">
-                  <label for="practice-mental">Mental Feel (1-5):</label>
-                  <input id="practice-mental" type="range" min="1" max="5" value="3" class="input range">
-                  <span id="mental-value">3</span>
-                </div>
-                
-                <textarea id="practice-notes" placeholder="Notes: Key techniques learned, specific opponents, areas for improvement..." class="input textarea" rows="4"></textarea>
-
-                <button type="submit" class="button form-row-full">Log Practice</button>
-              </form>
-            </div>
-            
-            <!-- Practice History Section -->
-            <div id="section-history" class="section ${currentTab === 'history' ? 'active' : ''}">
-              <h2>Practice History (${practices.length} total)</h2>
-              <ul id="practice-list" class="practice-list">
-                ${practices.slice().reverse().map(p => `
-                  <li data-id="${p.id}">
-                    <div class="practice-content">
-                      <span class="practice-item-text">${p.notes}</span>
-                      <div class="practice-meta">
-                        <span class="practice-item-type">${p.type}</span>
-                        ${p.duration ? `<span class="practice-item-duration">${p.duration} min</span>` : ''}
-                        ${p.intensity ? `<span class="practice-item-intensity">I: ${p.intensity}/10</span>` : ''}
-                        <span class="practice-item-date">${new Date(p.date).toLocaleDateString()}</span>
+              <!-- Log Practice -->
+              <section id="section-log" class="section ${currentTab === 'log' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2>Log today\'s work</h2>
+                      <p class="panel-subtitle">It should take under a minute. Be honest—progress is earned slowly.</p>
+                    </div>
+                  </div>
+                  <form id="practice-form" class="form-grid">
+                    <div class="form-card">
+                      <h3>Session basics</h3>
+                      <div class="field">
+                        <label for="practice-date">Date</label>
+                        <input id="practice-date" type="date" class="input" value="${new Date().toISOString().split('T')[0]}">
+                      </div>
+                      <div class="field">
+                        <label for="practice-type">Session type</label>
+                        <select id="practice-type" class="input">
+                          <option value="mixed">Mixed work</option>
+                          <option value="technique">Technique focus</option>
+                          <option value="live">Live wrestling</option>
+                          <option value="conditioning">Conditioning</option>
+                          <option value="competition">Competition</option>
+                          <option value="open-mat">Open mat</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <span class="label">Duration presets</span>
+                        <div class="chip-row">
+                          <button type="button" class="chip" data-duration="60">60 min</button>
+                          <button type="button" class="chip" data-duration="90">90 min</button>
+                          <button type="button" class="chip" data-duration="120">120 min</button>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="practice-duration">Manual duration (minutes)</label>
+                        <input id="practice-duration" type="number" min="1" inputmode="numeric" class="input" placeholder="75">
                       </div>
                     </div>
-                    <button class="delete-btn" data-id="${p.id}">✕</button>
-                  </li>
-                `).join('')}
-              </ul>
-            </div>
-            
-            <!-- Badges Section (Show Only Earned) -->
-            <div id="section-badges" class="section ${currentTab === 'badges' ? 'active' : ''}">
-              <h2>Earned Badges (${profile.earnedBadges.length} of ${ALL_BADGES.length})</h2>
-              <div class="badges">
-                ${ALL_BADGES.filter(badge => profile.earnedBadges.some(b => b.id === badge.id)).map(badge => {
-                    const earned = profile.earnedBadges.find(b => b.id === badge.id);
-                    return `
-                        <div class="badge earned">
-                            ${badge.icon} ${badge.name}
-                            <div class="badge-meta">Practice #${earned.practiceNumber}</div>
+
+                    <div class="form-card">
+                      <h3>How did it feel?</h3>
+                      <div class="field field-slider">
+                        <label for="practice-intensity">Intensity</label>
+                        <div class="slider-wrap">
+                          <input id="practice-intensity" type="range" min="1" max="10" value="5" class="input range">
+                          <span id="intensity-value" class="slider-value">5</span>
                         </div>
-                    `;
-                }).join('')}
-              </div>
-            </div>
-
-            <!-- Journey Guide Section (Static Text) -->
-            <div id="section-guide" class="section ${currentTab === 'guide' ? 'active' : ''}">
-                <h2>Wrestling Journey Guide</h2>
-                ${PHASES.map(phase => `
-                    <div class="stat-card" style="margin-bottom: 1rem;">
-                        <h3>Phase ${phase.id}: ${phase.name} (Goal: ${phase.goal} Practices)</h3>
-                        <p style="font-size: 1rem; color: var(--color-text-light); margin-top: 0.5rem;">${phase.description}</p>
+                      </div>
+                      <div class="field field-slider">
+                        <label for="practice-physical">Physical feel</label>
+                        <div class="slider-wrap">
+                          <input id="practice-physical" type="range" min="1" max="10" value="5" class="input range">
+                          <span id="physical-value" class="slider-value">5</span>
+                        </div>
+                      </div>
+                      <div class="field field-slider">
+                        <label for="practice-mental">Mental feel</label>
+                        <div class="slider-wrap">
+                          <input id="practice-mental" type="range" min="1" max="10" value="5" class="input range">
+                          <span id="mental-value" class="slider-value">5</span>
+                        </div>
+                      </div>
                     </div>
-                `).join('')}
-            </div>
 
-            <!-- Settings Section -->
-            <div id="section-settings" class="section ${currentTab === 'settings' ? 'active' : ''}">
-                <h2>Settings & Data Management</h2>
-                <div class="input-group" style="margin-bottom: 0.5rem;">
-                    <button id="export-btn" class="button">Export Data (JSON)</button>
-                    <button id="clear-btn" class="button" style="background-color: #dc2626;">Clear All Data</button>
-                </div>
-                <p style="font-size: 0.9rem; color: var(--color-text-muted);">Warning: Clearing data cannot be undone and removes all practices and badges.</p>
-                
-                <h3>Import Data</h3>
-                <input type="file" id="import-file" accept="application/json" class="input" style="padding: 0.75rem 0.5rem;">
-                <button id="import-btn" class="button">Import JSON</button>
-            </div>
+                    <div class="form-card">
+                      <h3>Notes for future you</h3>
+                      <div class="field">
+                        <label for="practice-notes">Key takeaways</label>
+                        <textarea id="practice-notes" class="input textarea" rows="4" placeholder="What clicked? What felt off? Be specific so future sessions improve."></textarea>
+                      </div>
+                    </div>
 
-            <!-- Journey Guide is now a separate section -->
+                    <div class="form-actions">
+                      <button type="submit" class="button">Save practice</button>
+                      <button type="button" class="button ghost" data-switch-to="dashboard">Cancel</button>
+                    </div>
+                  </form>
+                </article>
+              </section>
+
+              <!-- History -->
+              <section id="section-history" class="section ${currentTab === 'history' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2>Practice history</h2>
+                      <p class="panel-subtitle">Scroll through the work. No shortcuts, just honest reps.</p>
+                    </div>
+                    <span class="phase-chip subtle">${practices.length} logged</span>
+                  </div>
+                  ${practices.length ? `
+                    <ul id="practice-list" class="practice-list">
+                      ${practices.slice().reverse().map(p => `
+                        <li class="practice-card" data-id="${p.id}">
+                          <div class="practice-card-header">
+                            <span class="practice-type">${p.type}</span>
+                            <time class="practice-date">${new Date(p.date).toLocaleDateString()}</time>
+                          </div>
+                          <p class="practice-notes">${p.notes}</p>
+                          <div class="practice-metrics">
+                            ${p.duration ? `<span>${p.duration} min</span>` : ''}
+                            ${p.intensity ? `<span>Intensity ${p.intensity}/10</span>` : ''}
+                            ${typeof p.physical === 'number' ? `<span>Physical ${p.physical}/10</span>` : ''}
+                            ${typeof p.mental === 'number' ? `<span>Mental ${p.mental}/10</span>` : ''}
+                          </div>
+                          <button class="delete-btn" data-id="${p.id}">Delete</button>
+                        </li>
+                      `).join('')}
+                    </ul>
+                  ` : '<div class="empty">No sessions logged yet. Start with today\'s practice.</div>'}
+                </article>
+              </section>
+
+              <!-- Badges -->
+              <section id="section-badges" class="section ${currentTab === 'badges' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2>Earned badges</h2>
+                      <p class="panel-subtitle">Consistency over hype. Each badge marks a real milestone.</p>
+                    </div>
+                    <span class="phase-chip subtle">${earnedBadges.length} / ${ALL_BADGES.length}</span>
+                  </div>
+                  <div class="badge-grid">
+                    ${ALL_BADGES.map(badge => {
+                      const earned = earnedBadges.find(b => b.id === badge.id);
+                      return `
+                        <div class="badge-card ${earned ? 'earned' : ''}">
+                          <span class="badge-icon">${BADGE_ICONS[badge.id] || '🥋'}</span>
+                          <h3>${badge.name}</h3>
+                          <p class="badge-description">${badge.description}</p>
+                          ${earned ? `<p class="badge-earned">Unlocked ${new Date(earned.earnedDate).toLocaleDateString()} · Practice #${earned.practiceNumber}</p>` : '<p class="badge-earned">Keep grinding to unlock.</p>'}
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </article>
+              </section>
+
+              <!-- Journey Guide -->
+              <section id="section-guide" class="section ${currentTab === 'guide' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
+                    <h2>Journey guide</h2>
+                    <p class="panel-subtitle">Phases explain what to expect. No promises, just direction.</p>
+                  </div>
+                  <div class="guide-grid">
+                    ${PHASES.map(phase => `
+                      <div class="guide-card">
+                        <p class="eyebrow">Phase ${phase.id}</p>
+                        <h3>${phase.name}</h3>
+                        <p class="guide-goal">Goal: ${phase.goal} logged practices</p>
+                        <p class="guide-description">${phase.description}</p>
+                      </div>
+                    `).join('')}
+                  </div>
+                </article>
+              </section>
+
+              <!-- Settings -->
+              <section id="section-settings" class="section ${currentTab === 'settings' ? 'active' : ''}">
+                <article class="panel">
+                  <div class="panel-header">
+                    <h2>Data & settings</h2>
+                    <p class="panel-subtitle">Your data stays on-device. Export for backups, clear when needed.</p>
+                  </div>
+                  <div class="settings-actions">
+                    <button id="export-btn" class="button secondary">Export JSON</button>
+                    <button id="clear-btn" class="button danger">Clear all data</button>
+                  </div>
+                  <div class="settings-import">
+                    <label for="import-file">Import saved data</label>
+                    <input type="file" id="import-file" accept="application/json" class="input">
+                    <button id="import-btn" class="button ghost">Import JSON</button>
+                  </div>
+                  <p class="settings-note">Clearing data removes every practice and badge. There are no take-backs.</p>
+                </article>
+              </section>
+            </main>
           </div>
         `;
 
@@ -276,8 +374,16 @@
         document.getElementById('practice-mental').addEventListener('input', () => updateSliderValue('mental'));
         document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', switchTab));
         document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeletePractice));
-        document.querySelectorAll('.preset-btn').forEach(btn => btn.addEventListener('click', handleDurationPreset));
-        
+        document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', handleDurationPreset));
+        document.querySelectorAll('[data-switch-to]').forEach(btn => btn.addEventListener('click', quickSwitch));
+        const heroButton = document.getElementById('hero-log-btn');
+        if (heroButton) {
+          heroButton.addEventListener('click', () => {
+            currentTab = 'log';
+            render();
+          });
+        }
+
         // Settings Listeners
         document.getElementById('export-btn').addEventListener('click', handleExportData);
         document.getElementById('clear-btn').addEventListener('click', handleClearData);
@@ -296,6 +402,14 @@
       
       function handleDurationPreset(e) {
           document.getElementById('practice-duration').value = e.target.dataset.duration;
+      }
+
+      function quickSwitch(e) {
+        const target = e.currentTarget.getAttribute('data-switch-to');
+        if (target) {
+          currentTab = target;
+          render();
+        }
       }
 
       async function handleAddPractice(e) {
@@ -330,9 +444,9 @@
         document.getElementById('practice-form').reset();
         document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
         document.getElementById('practice-intensity').value = 5;
-        document.getElementById('practice-physical').value = 3;
-        document.getElementById('practice-mental').value = 3;
-        
+        document.getElementById('practice-physical').value = 5;
+        document.getElementById('practice-mental').value = 5;
+
         // Switch to Dashboard and re-render
         currentTab = 'dashboard';
         render();
