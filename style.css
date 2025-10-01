@@ -218,3 +218,165 @@ input[type="range"]::-moz-range-thumb:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
+
+/* --- Tabs --- */
+.tabs {
+  display: flex;
+  margin-bottom: var(--spacing-unit);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-speed);
+}
+
+.tab.active {
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.tab:hover {
+  color: var(--color-text-light);
+}
+
+/* --- Sections --- */
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+/* --- Form Elements --- */
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-unit);
+  gap: var(--spacing-unit);
+}
+
+.form-row label {
+  flex: 0 0 150px;
+  font-size: 0.9rem;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.small {
+  flex: 0 0 100px;
+}
+
+.range {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* --- Practice List --- */
+.practice-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-unit);
+  padding: var(--spacing-unit);
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius-card);
+  margin-bottom: var(--spacing-unit);
+}
+
+.practice-content {
+  flex: 1;
+}
+
+.practice-meta {
+  display: flex;
+  gap: var(--spacing-unit);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.25rem;
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-speed);
+}
+
+.delete-btn:hover {
+  background-color: #dc2626;
+  color: white;
+}
+
+/* --- Stats --- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-unit);
+  margin-top: var(--spacing-unit);
+}
+
+.stat-card {
+  padding: var(--spacing-unit);
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius-card);
+  text-align: center;
+}
+
+.stat-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.stat-card p {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+/* --- Badges --- */
+.badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--spacing-unit);
+  margin-top: var(--spacing-unit);
+}
+
+.badge {
+  padding: var(--spacing-unit);
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius-card);
+  text-align: center;
+  opacity: 0.5;
+  transition: var(--transition-speed);
+}
+
+.badge.earned {
+  opacity: 1;
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* --- Motivate --- */
+#motivation-prompt {
+  font-style: italic;
+  margin-bottom: var(--spacing-unit);
+  padding: var(--spacing-unit);
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius-card);
+  border-left: 4px solid var(--color-primary);
+}

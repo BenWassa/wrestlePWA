@@ -29,44 +29,166 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.getElementById('root');
-      const practices = JSON.parse(localStorage.getItem('practices') || '[]');
+      let practices = JSON.parse(localStorage.getItem('practices') || '[]');
+      let currentTab = 'log';
 
       function render() {
-        // NOTE: The practice list item rendering is updated to use <span> tags
-        // to separate the text and date, allowing for card-style layout via CSS.
         root.innerHTML = `
           <div class="app">
             <h1 class="title">Wrestling Journey</h1>
-            <div class="input-group">
-              <input id="practice-input" type="text" placeholder="Log a practice..." class="input">
-              <button id="add-btn" class="button">Add Practice</button>
+            
+            <!-- Tab Buttons -->
+            <div class="tabs">
+              <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}">Log</button>
+              <button id="tab-track" class="tab ${currentTab === 'track' ? 'active' : ''}">Track</button>
+              <button id="tab-reward" class="tab ${currentTab === 'reward' ? 'active' : ''}">Reward</button>
+              <button id="tab-motivate" class="tab ${currentTab === 'motivate' ? 'active' : ''}">Motivate</button>
             </div>
-            <ul id="practice-list" class="practice-list">
-              ${practices.map(p => `
-                <li>
-                  <span class="practice-item-text">${p.text}</span>
-                  <span class="practice-item-date">${new Date(p.date).toLocaleDateString()}</span>
-                </li>
-              `).join('')}
-            </ul>
+            
+            <!-- Log Section -->
+            <div id="section-log" class="section ${currentTab === 'log' ? 'active' : ''}">
+              <form id="practice-form" class="input-group">
+                <textarea id="practice-notes" placeholder="Describe your practice (techniques, drills, etc.)..." class="input textarea" rows="3"></textarea>
+                <div class="form-row">
+                  <label for="practice-duration">Duration (minutes):</label>
+                  <input id="practice-duration" type="number" min="1" class="input small">
+                </div>
+                <div class="form-row">
+                  <label for="practice-rating">Intensity Rating (1-5):</label>
+                  <input id="practice-rating" type="range" min="1" max="5" value="3" class="input range">
+                  <span id="rating-value">3</span>
+                </div>
+                <div class="form-row">
+                  <label for="practice-date">Date:</label>
+                  <input id="practice-date" type="date" class="input small" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <button type="submit" class="button">Add Practice</button>
+              </form>
+              
+              <h2>Recent Practices</h2>
+              <ul id="practice-list" class="practice-list">
+                ${practices.slice(-10).reverse().map(p => `
+                  <li>
+                    <div class="practice-content">
+                      <span class="practice-item-text">${p.notes || p.text}</span>
+                      <div class="practice-meta">
+                        ${p.duration ? `<span class="practice-item-duration">${p.duration} min</span>` : ''}
+                        ${p.rating ? `<span class="practice-item-rating">⭐ ${p.rating}/5</span>` : ''}
+                        <span class="practice-item-date">${new Date(p.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <button class="delete-btn" data-id="${p.id}">✕</button>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+            
+            <!-- Track Section -->
+            <div id="section-track" class="section ${currentTab === 'track' ? 'active' : ''}">
+              <h2>Progress Tracking</h2>
+              <div class="stats">
+                <div class="stat-card">
+                  <h3>Total Practices</h3>
+                  <p>${practices.length}</p>
+                </div>
+                <div class="stat-card">
+                  <h3>Average Rating</h3>
+                  <p>${practices.length ? (practices.reduce((sum, p) => sum + (p.rating || 0), 0) / practices.length).toFixed(1) : 0}/5</p>
+                </div>
+                <div class="stat-card">
+                  <h3>Total Time</h3>
+                  <p>${practices.reduce((sum, p) => sum + (p.duration || 0), 0)} min</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Reward Section -->
+            <div id="section-reward" class="section ${currentTab === 'reward' ? 'active' : ''}">
+              <h2>Badges & Achievements</h2>
+              <div class="badges">
+                ${getBadges().map(badge => `<div class="badge ${badge.earned ? 'earned' : ''}">${badge.icon} ${badge.name}</div>`).join('')}
+              </div>
+            </div>
+            
+            <!-- Motivate Section -->
+            <div id="section-motivate" class="section ${currentTab === 'motivate' ? 'active' : ''}">
+              <h2>Get Motivated</h2>
+              <p id="motivation-prompt">${generatePrompt()}</p>
+              <button id="new-prompt" class="button">New Prompt</button>
+            </div>
           </div>
         `;
 
-        document.getElementById('add-btn').addEventListener('click', addPractice);
-        document.getElementById('practice-input').addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') addPractice();
+        // Event listeners
+        document.getElementById('practice-form').addEventListener('submit', addPractice);
+        document.getElementById('practice-rating').addEventListener('input', updateRating);
+        document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', switchTab));
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', deletePractice));
+        document.getElementById('new-prompt').addEventListener('click', () => {
+          document.getElementById('motivation-prompt').textContent = generatePrompt();
         });
       }
 
-      function addPractice() {
-        const input = document.getElementById('practice-input');
-        const text = input.value.trim();
-        if (text) {
-          practices.push({ id: Date.now(), text, date: new Date().toISOString() });
+      function addPractice(e) {
+        e.preventDefault();
+        const notes = document.getElementById('practice-notes').value.trim();
+        const duration = parseInt(document.getElementById('practice-duration').value) || null;
+        const rating = parseInt(document.getElementById('practice-rating').value);
+        const date = document.getElementById('practice-date').value;
+        
+        if (notes) {
+          practices.push({ id: Date.now(), notes, duration, rating, date });
           localStorage.setItem('practices', JSON.stringify(practices));
-          input.value = '';
+          document.getElementById('practice-form').reset();
+          document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
           render();
         }
+      }
+
+      function updateRating() {
+        document.getElementById('rating-value').textContent = document.getElementById('practice-rating').value;
+      }
+
+      function switchTab(e) {
+        currentTab = e.target.id.split('-')[1];
+        render();
+      }
+
+      function deletePractice(e) {
+        const id = parseInt(e.target.dataset.id);
+        practices = practices.filter(p => p.id !== id);
+        localStorage.setItem('practices', JSON.stringify(practices));
+        render();
+      }
+
+      function getBadges() {
+        const total = practices.length;
+        const avgRating = practices.length ? practices.reduce((sum, p) => sum + (p.rating || 0), 0) / practices.length : 0;
+        const totalTime = practices.reduce((sum, p) => sum + (p.duration || 0), 0);
+        
+        return [
+          { name: 'First Practice', icon: '🏆', earned: total >= 1 },
+          { name: '10 Practices', icon: '🎖️', earned: total >= 10 },
+          { name: '50 Practices', icon: '🥇', earned: total >= 50 },
+          { name: 'High Performer', icon: '⭐', earned: avgRating >= 4 },
+          { name: 'Dedicated', icon: '⏰', earned: totalTime >= 1000 },
+        ];
+      }
+
+      function generatePrompt() {
+        const prompts = [
+          "Visualize yourself dominating the mat. What does victory feel like?",
+          "Think of your toughest opponent. How will you overcome them?",
+          "Remember why you started wrestling. Channel that passion today.",
+          "Break down your goals into small, actionable steps.",
+          "Embrace the grind. Every drop of sweat brings you closer to mastery.",
+          "Study great wrestlers. What can you learn from their technique?",
+          "Rest and recover. Your body needs fuel to perform.",
+          "Set a new personal record today, no matter how small.",
+          "Teamwork makes the dream work. Support your teammates.",
+          "Stay humble, stay hungry. The journey never ends."
+        ];
+        return prompts[Math.floor(Math.random() * prompts.length)];
       }
 
       render();
