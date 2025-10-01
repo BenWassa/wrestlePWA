@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wrestling-journey-v3'; // <--- UPDATED CACHE VERSION
+const CACHE_NAME = 'wrestling-journey-v4'; // <--- UPDATED CACHE VERSION (comprehensive badge system)
 const urlsToCache = [
   '/',
   '/index.html',
