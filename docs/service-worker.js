@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wrestling-journey-v6'; // <--- UPDATED CACHE VERSION (dashboard consolidation)
+const CACHE_NAME = 'wrestling-journey-v7'; // <--- UPDATED CACHE VERSION (Pixel 8 mobile optimization)
 const urlsToCache = [
   '/',
   '/index.html',

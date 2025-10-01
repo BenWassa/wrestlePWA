@@ -58,7 +58,7 @@ TestRunner.describe('PWA Functionality', () => {
             TestRunner.assert.equal(response.status, 200, 'Service worker should load successfully');
 
             const content = await response.text();
-            TestRunner.assert.includes(content, 'wrestling-journey-v4', 'Service worker should have correct cache name');
+            TestRunner.assert.includes(content, 'wrestling-journey-v7', 'Service worker should have correct cache name');
             TestRunner.assert.includes(content, 'db.js', 'Service worker should cache db.js');
         } catch (error) {
             throw new Error(`Failed to load service worker: ${error.message}`);
