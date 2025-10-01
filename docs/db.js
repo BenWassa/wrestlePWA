@@ -222,19 +222,19 @@ function calculatePracticeStats(practices) {
 
 // Minimal badge set used by tests (keeps external API stable but uses numeric ids)
 export const ALL_BADGES = [
-    { id: 1, name: 'First Practice', check: (practicesOrStats) => {
+    { id: 1, name: 'First Practice', description: 'Log your very first practice.', icon: '🏅', milestone: 1, category: 'volume', check: (practicesOrStats) => {
         const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
         return stats.practiceCount >= 1;
     }},
-    { id: 2, name: 'Ten Practices', check: (practicesOrStats) => {
+    { id: 2, name: '10 Practices', description: 'Ten honest sessions logged.', icon: '💪', milestone: 10, category: 'volume', check: (practicesOrStats) => {
         const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
         return stats.practiceCount >= 10;
     }},
-    { id: 3, name: 'Fifty Practices', check: (practicesOrStats) => {
+    { id: 3, name: '50 Practices', description: 'Fifty practices: the habit is real.', icon: '🥇', milestone: 50, category: 'volume', check: (practicesOrStats) => {
         const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
         return stats.practiceCount >= 50;
     }},
-    { id: 4, name: 'High Intensity (4+)', check: (practicesOrStats) => {
+    { id: 4, name: 'High Intensity Focus', description: 'Average intensity 4+ over the last 5 sessions (min 5 sessions).', icon: '⚡', category: 'effort', check: (practicesOrStats) => {
         const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats, avgRecentIntensity: 0 } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
         return stats.avgRecentIntensity >= 4 && stats.practiceCount >= 5;
     }}
