@@ -78,6 +78,7 @@
     <p>Testing harness for vanilla JS PWA functionality</p>
 
     <button class="run-tests" onclick="runAllTests()">Run All Tests</button>
+    <button class="run-tests" onclick="copyFailedTests()" id="copyFailedBtn" style="display: none; background: #f44336;">Copy Failed Tests</button>
 
     <div class="progress">
         <div class="progress-bar" id="progressBar"></div>
@@ -133,14 +134,16 @@
             const resultsDiv = document.getElementById('testResults');
             const progressBar = document.getElementById('progressBar');
             const summaryDiv = document.getElementById('summary');
-            const summaryText = document.getElementById('summaryText');
+            const copyFailedBtn = document.getElementById('copyFailedBtn');
 
             resultsDiv.innerHTML = '<p>Running tests...</p>';
             summaryDiv.style.display = 'none';
+            copyFailedBtn.style.display = 'none';
             progressBar.style.width = '0%';
 
             try {
                 const results = await TestRunner.runAll();
+                window.lastTestResults = results; // Store for copy function
                 displayResults(results);
             } catch (error) {
                 resultsDiv.innerHTML = `<p style="color: #f44336;">Test runner failed: ${error.message}</p>`;
@@ -152,21 +155,26 @@
             const progressBar = document.getElementById('progressBar');
             const summaryDiv = document.getElementById('summary');
             const summaryText = document.getElementById('summaryText');
+            const copyFailedBtn = document.getElementById('copyFailedBtn');
 
             let html = '';
             let totalTests = 0;
             let passedTests = 0;
+            let failedTests = 0;
 
             results.forEach(group => {
+                group.tests.forEach(test => {
+                    totalTests++;
+                    if (test.status === 'pass') passedTests++;
+                    if (test.status === 'fail') failedTests++;
+                });
+
                 const groupClass = group.failed === 0 ? 'pass' : 'fail';
                 html += `<div class="test-group ${groupClass}">`;
                 html += `<h3>${group.name}</h3>`;
 
                 group.tests.forEach(test => {
-                    totalTests++;
                     const testClass = test.status === 'pass' ? 'pass' : test.status === 'fail' ? 'fail' : 'pending';
-                    if (test.status === 'pass') passedTests++;
-
                     html += `<div class="test-case ${testClass}">`;
                     html += `<strong>${test.name}:</strong> ${test.status}`;
                     if (test.error) {
@@ -181,11 +189,90 @@
             resultsDiv.innerHTML = html;
 
             const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
-            summaryText.innerHTML = `Total Tests: ${totalTests}<br>Passed: ${passedTests}<br>Failed: ${totalTests - passedTests}<br>Pass Rate: ${passRate}%`;
+            summaryText.innerHTML = `Total Tests: ${totalTests}<br>Passed: ${passedTests}<br>Failed: ${failedTests}<br>Pass Rate: ${passRate}%`;
             summaryDiv.style.display = 'block';
 
             progressBar.style.width = `${passRate}%`;
             progressBar.style.background = passRate === 100 ? '#4CAF50' : passRate >= 70 ? '#ff9800' : '#f44336';
+
+            // Show copy failed tests button if there are failures
+            if (failedTests > 0) {
+                copyFailedBtn.style.display = 'inline-block';
+            }
+        }
+
+        async function copyFailedTests() {
+            const copyFailedBtn = document.getElementById('copyFailedBtn');
+
+            if (!window.lastTestResults) {
+                alert('No test results available. Run tests first.');
+                return;
+            }
+
+            let failedResults = 'FAILED TEST RESULTS\n';
+            failedResults += '=' .repeat(50) + '\n\n';
+
+            let totalFailed = 0;
+
+            window.lastTestResults.forEach(group => {
+                const failedTests = group.tests.filter(test => test.status === 'fail');
+
+                if (failedTests.length > 0) {
+                    failedResults += `GROUP: ${group.name}\n`;
+                    failedResults += '-'.repeat(30) + '\n';
+
+                    failedTests.forEach(test => {
+                        totalFailed++;
+                        failedResults += `❌ ${test.name}\n`;
+                        if (test.error) {
+                            failedResults += `   Error: ${test.error}\n`;
+                        }
+                        failedResults += '\n';
+                    });
+                }
+            });
+
+            failedResults += `TOTAL FAILED: ${totalFailed}\n`;
+            failedResults += `TIMESTAMP: ${new Date().toISOString()}\n`;
+            failedResults += `USER AGENT: ${navigator.userAgent}\n`;
+
+            try {
+                await navigator.clipboard.writeText(failedResults);
+                const originalText = copyFailedBtn.textContent;
+                copyFailedBtn.textContent = 'Copied!';
+                copyFailedBtn.style.background = '#4CAF50';
+
+                setTimeout(() => {
+                    copyFailedBtn.textContent = originalText;
+                    copyFailedBtn.style.background = '#f44336';
+                }, 2000);
+            } catch (error) {
+                // Fallback for browsers that don't support clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = failedResults;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    document.execCommand('copy');
+                    const originalText = copyFailedBtn.textContent;
+                    copyFailedBtn.textContent = 'Copied!';
+                    copyFailedBtn.style.background = '#4CAF50';
+
+                    setTimeout(() => {
+                        copyFailedBtn.textContent = originalText;
+                        copyFailedBtn.style.background = '#f44336';
+                    }, 2000);
+                } catch (fallbackError) {
+                    alert('Failed to copy to clipboard. Please check browser permissions.');
+                } finally {
+                    document.body.removeChild(textArea);
+                }
+            }
         }
     </script>
 </body>

@@ -64,6 +64,7 @@ testing/
 - **Visual Results**: Color-coded pass/fail with progress bar
 - **Console Logging**: Detailed output in browser console
 - **Error Reporting**: Clear error messages for failed tests
+- **Copy Failures**: One-click copying of all failed test results for debugging
 
 ## Writing New Tests
 
