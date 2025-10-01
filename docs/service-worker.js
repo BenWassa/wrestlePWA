@@ -1,11 +1,11 @@
-const CACHE_NAME = 'wrestling-journey-v3'; // <--- CACHE VERSION INCREMENTED
+const CACHE_NAME = 'wrestling-journey-v3'; // <--- UPDATED CACHE VERSION
 const urlsToCache = [
   '/',
   '/index.html',
-  '/style.css',
-  '/db.js',           // <--- NEW: IndexedDB logic
-  '/icon.svg',
-  '/manifest.json'
+  '/style.css',       // <--- Crucial for styling
+  '/icon.svg',        // <--- App icon
+  '/manifest.json',   // <--- PWA metadata
+  '/db.js'            // <--- NEW: IndexedDB wrapper for data persistence
 ];
 
 // Install service worker and cache files

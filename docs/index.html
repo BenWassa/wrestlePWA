@@ -21,68 +21,200 @@
   <!-- Custom Stylesheet (UPGRADED) -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- REMOVED: All inline <style> blocks have been moved to style.css -->
 </head>
 <body>
   <div id="root"></div>
   
-  <!-- Import the IndexedDB module (type="module" is required for 'import') -->
   <script type="module" src="db.js"></script>
   
   <script type="module">
-    // Import the functions from db.js
-    import { getPractices, addPractice as dbAddPractice, deletePractice as dbDeletePractice } from './db.js';
+    // Import all necessary functions from the new db.js module
+    import { getPractices, addPractice as dbAddPractice, deletePractice as dbDeletePractice, getProfile, setProfile, clearAllData } from './db.js';
     
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.getElementById('root');
-      let practices = []; // Practices will be loaded asynchronously
-      let currentTab = 'log';
+      let practices = [];
+      let profile = {};
+      let currentTab = 'dashboard';
 
+      // --- JOURNEY DATA & LOGIC ---
+      const PHASES = [
+        { id: 1, name: "The Baseline", goal: 10, description: "Focus on fundamental movement and conditioning. Log 10 practices to establish consistency." },
+        { id: 2, name: "The Grind", goal: 50, description: "Refining core techniques and finding your preferred style. Log 50 total practices." },
+        { id: 3, name: "The Competitor", goal: 100, description: "Peak conditioning, advanced technique chains, and mental preparation. Log 100 total practices." },
+        // ... extend as needed
+      ];
+
+      function getPhase(totalPractices) {
+          let currentPhase = PHASES[0];
+          let nextPhase = null;
+
+          for (let i = 0; i < PHASES.length; i++) {
+              if (totalPractices >= PHASES[i].goal) {
+                  currentPhase = PHASES[i];
+                  if (PHASES[i+1]) {
+                      nextPhase = PHASES[i+1];
+                  }
+              } else if (totalPractices < PHASES[i].goal && !nextPhase) {
+                  nextPhase = PHASES[i];
+              }
+          }
+          const progress = nextPhase ? Math.min(100, (totalPractices / nextPhase.goal) * 100) : 100;
+
+          return { current: currentPhase, next: nextPhase, progress };
+      }
+
+      const ALL_BADGES = [
+          { id: 1, name: 'First Practice', icon: '🏆', check: (p) => p.length >= 1 },
+          { id: 2, name: '10 Practices', icon: '🎖️', check: (p) => p.length >= 10 },
+          { id: 3, name: '50 Practices', icon: '🥇', check: (p) => p.length >= 50 },
+          { id: 4, name: '4+ Rating', icon: '⭐', check: (p) => p.length && (p.reduce((sum, pr) => sum + (pr.intensity || 0), 0) / p.length) >= 4 },
+      ];
+
+      function checkBadges(practices, currentProfile) {
+          let updatedProfile = { ...currentProfile };
+          let changed = false;
+
+          const latestPracticeNum = practices.length;
+
+          ALL_BADGES.forEach(badge => {
+              const isEarned = currentProfile.earnedBadges.some(b => b.id === badge.id);
+              
+              if (!isEarned && badge.check(practices)) {
+                  updatedProfile.earnedBadges.push({
+                      id: badge.id,
+                      earnedDate: new Date().toISOString(),
+                      practiceNumber: latestPracticeNum
+                  });
+                  changed = true;
+                  console.log(`Badge Earned: ${badge.name}`);
+              }
+          });
+          return changed ? updatedProfile : null;
+      }
+      
+      // --- RENDER FUNCTION ---
       async function render() {
-        // ASYNCHRONOUS LOAD: Replaces localStorage read
-        practices = await getPractices(); 
+        practices = await getPractices();
+        profile = await getProfile();
+
+        const { current: currentPhase, next: nextPhase, progress } = getPhase(practices.length);
         
+        // Update profile if a badge was earned
+        const updatedProfile = checkBadges(practices, profile);
+        if (updatedProfile) {
+            profile = updatedProfile;
+            await setProfile(profile);
+        }
+
+        const stats = {
+          totalPractices: practices.length,
+          avgIntensity: practices.length ? (practices.reduce((sum, p) => sum + (p.intensity || 0), 0) / practices.length).toFixed(1) : '0.0',
+          totalTime: practices.reduce((sum, p) => sum + (p.duration || 0), 0),
+          lastPracticeDate: practices.length ? new Date(practices.slice(-1)[0].date).toLocaleDateString() : 'N/A'
+        };
+
         root.innerHTML = `
           <div class="app">
             <h1 class="title">Wrestling Journey</h1>
             
-            <!-- Tab Buttons -->
+            <!-- Tab Buttons - Aligned with Truth Doc -->
             <div class="tabs">
-              <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}">Log</button>
-              <button id="tab-track" class="tab ${currentTab === 'track' ? 'active' : ''}">Track</button>
-              <button id="tab-reward" class="tab ${currentTab === 'reward' ? 'active' : ''}">Reward</button>
-              <button id="tab-motivate" class="tab ${currentTab === 'motivate' ? 'active' : ''}">Motivate</button>
+              <button id="tab-dashboard" class="tab ${currentTab === 'dashboard' ? 'active' : ''}">Dashboard</button>
+              <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}">Log Practice</button>
+              <button id="tab-history" class="tab ${currentTab === 'history' ? 'active' : ''}">History</button>
+              <button id="tab-badges" class="tab ${currentTab === 'badges' ? 'active' : ''}">Badges</button>
+              <button id="tab-guide" class="tab ${currentTab === 'guide' ? 'active' : ''}">Journey Guide</button>
+              <button id="tab-settings" class="tab ${currentTab === 'settings' ? 'active' : ''}">Settings</button>
             </div>
             
-            <!-- Log Section -->
-            <div id="section-log" class="section ${currentTab === 'log' ? 'active' : ''}">
-              <form id="practice-form" class="input-group">
-                <textarea id="practice-notes" placeholder="Describe your practice (techniques, drills, etc.)..." class="input textarea" rows="3"></textarea>
-                <div class="form-row">
-                  <label for="practice-duration">Duration (minutes):</label>
-                  <input id="practice-duration" type="number" min="1" class="input small">
-                </div>
-                <div class="form-row">
-                  <label for="practice-rating">Intensity Rating (1-5):</label>
-                  <input id="practice-rating" type="range" min="1" max="5" value="3" class="input range">
-                  <span id="rating-value">3</span>
-                </div>
-                <div class="form-row">
-                  <label for="practice-date">Date:</label>
-                  <input id="practice-date" type="date" class="input small" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-                <button type="submit" class="button">Add Practice</button>
-              </form>
+            <!-- Dashboard Section -->
+            <div id="section-dashboard" class="section ${currentTab === 'dashboard' ? 'active' : ''}">
+              <h2>Your Journey: ${currentPhase.name}</h2>
+              <p>Next Goal: ${nextPhase ? `${nextPhase.goal} Practices (${nextPhase.name})` : 'Mastery!'}</p>
               
-              <h2>Recent Practices</h2>
+              <div class="progress-bar-container">
+                  <div class="progress-bar" style="width: ${progress}%"></div>
+              </div>
+              <p class="progress-label">${practices.length} / ${nextPhase ? nextPhase.goal : practices.length} Practices</p>
+
+              <div class="stats">
+                <div class="stat-card"><h3>Total Practices</h3><p>${stats.totalPractices}</p></div>
+                <div class="stat-card"><h3>Avg Intensity</h3><p>⭐ ${stats.avgIntensity}/10</p></div>
+                <div class="stat-card"><h3>Total Time</h3><p>${stats.totalTime} min</p></div>
+              </div>
+            </div>
+
+            <!-- Log Practice Section - Structured Input -->
+            <div id="section-log" class="section ${currentTab === 'log' ? 'active' : ''}">
+              <h2>Log a Practice</h2>
+              <form id="practice-form" class="input-group">
+                
+                <div class="form-row form-row-full">
+                  <label for="practice-type">Type:</label>
+                  <select id="practice-type" class="input">
+                      <option value="drills">Drills/Technique</option>
+                      <option value="live">Live Sparring/Rolling</option>
+                      <option value="conditioning">Conditioning/Strength</option>
+                      <option value="competition">Competition</option>
+                  </select>
+                </div>
+                
+                <div class="form-row form-row-full">
+                  <label for="practice-date">Date:</label>
+                  <input id="practice-date" type="date" class="input" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+
+                <div class="form-row form-row-full duration-presets">
+                    <label>Duration Presets (min):</label>
+                    <div>
+                        <button type="button" class="button preset-btn" data-duration="60">60</button>
+                        <button type="button" class="button preset-btn" data-duration="90">90</button>
+                        <button type="button" class="button preset-btn" data-duration="120">120</button>
+                    </div>
+                </div>
+
+                <div class="form-row form-row-full">
+                  <label for="practice-duration">Manual Duration (min):</label>
+                  <input id="practice-duration" type="number" min="1" class="input small" placeholder="e.g. 75">
+                </div>
+
+                <div class="form-row form-row-slider">
+                  <label for="practice-intensity">Intensity (1-10):</label>
+                  <input id="practice-intensity" type="range" min="1" max="10" value="5" class="input range">
+                  <span id="intensity-value">5</span>
+                </div>
+
+                <div class="form-row form-row-slider">
+                  <label for="practice-physical">Physical Feel (1-5):</label>
+                  <input id="practice-physical" type="range" min="1" max="5" value="3" class="input range">
+                  <span id="physical-value">3</span>
+                </div>
+
+                <div class="form-row form-row-slider">
+                  <label for="practice-mental">Mental Feel (1-5):</label>
+                  <input id="practice-mental" type="range" min="1" max="5" value="3" class="input range">
+                  <span id="mental-value">3</span>
+                </div>
+                
+                <textarea id="practice-notes" placeholder="Notes: Key techniques learned, specific opponents, areas for improvement..." class="input textarea" rows="4"></textarea>
+
+                <button type="submit" class="button form-row-full">Log Practice</button>
+              </form>
+            </div>
+            
+            <!-- Practice History Section -->
+            <div id="section-history" class="section ${currentTab === 'history' ? 'active' : ''}">
+              <h2>Practice History (${practices.length} total)</h2>
               <ul id="practice-list" class="practice-list">
-                ${practices.slice(-10).reverse().map(p => `
-                  <li>
+                ${practices.slice().reverse().map(p => `
+                  <li data-id="${p.id}">
                     <div class="practice-content">
-                      <span class="practice-item-text">${p.notes || p.text}</span>
+                      <span class="practice-item-text">${p.notes}</span>
                       <div class="practice-meta">
+                        <span class="practice-item-type">${p.type}</span>
                         ${p.duration ? `<span class="practice-item-duration">${p.duration} min</span>` : ''}
-                        ${p.rating ? `<span class="practice-item-rating">⭐ ${p.rating}/5</span>` : ''}
+                        ${p.intensity ? `<span class="practice-item-intensity">I: ${p.intensity}/10</span>` : ''}
                         <span class="practice-item-date">${new Date(p.date).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -92,73 +224,118 @@
               </ul>
             </div>
             
-            <!-- Track Section -->
-            <div id="section-track" class="section ${currentTab === 'track' ? 'active' : ''}">
-              <h2>Progress Tracking</h2>
-              <div class="stats">
-                <div class="stat-card">
-                  <h3>Total Practices</h3>
-                  <p>${practices.length}</p>
-                </div>
-                <div class="stat-card">
-                  <h3>Average Rating</h3>
-                  <p>${practices.length ? (practices.reduce((sum, p) => sum + (p.rating || 0), 0) / practices.length).toFixed(1) : 0}/5</p>
-                </div>
-                <div class="stat-card">
-                  <h3>Total Time</h3>
-                  <p>${practices.reduce((sum, p) => sum + (p.duration || 0), 0)} min</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Reward Section -->
-            <div id="section-reward" class="section ${currentTab === 'reward' ? 'active' : ''}">
-              <h2>Badges & Achievements</h2>
+            <!-- Badges Section (Show Only Earned) -->
+            <div id="section-badges" class="section ${currentTab === 'badges' ? 'active' : ''}">
+              <h2>Earned Badges (${profile.earnedBadges.length} of ${ALL_BADGES.length})</h2>
               <div class="badges">
-                ${getBadges(practices).map(badge => `<div class="badge ${badge.earned ? 'earned' : ''}">${badge.icon} ${badge.name}</div>`).join('')}
+                ${ALL_BADGES.filter(badge => profile.earnedBadges.some(b => b.id === badge.id)).map(badge => {
+                    const earned = profile.earnedBadges.find(b => b.id === badge.id);
+                    return `
+                        <div class="badge earned">
+                            ${badge.icon} ${badge.name}
+                            <div class="badge-meta">Practice #${earned.practiceNumber}</div>
+                        </div>
+                    `;
+                }).join('')}
               </div>
             </div>
-            
-            <!-- Motivate Section -->
-            <div id="section-motivate" class="section ${currentTab === 'motivate' ? 'active' : ''}">
-              <h2>Get Motivated</h2>
-              <p id="motivation-prompt">${generatePrompt()}</p>
-              <button id="new-prompt" class="button">New Prompt</button>
+
+            <!-- Journey Guide Section (Static Text) -->
+            <div id="section-guide" class="section ${currentTab === 'guide' ? 'active' : ''}">
+                <h2>Wrestling Journey Guide</h2>
+                ${PHASES.map(phase => `
+                    <div class="stat-card" style="margin-bottom: 1rem;">
+                        <h3>Phase ${phase.id}: ${phase.name} (Goal: ${phase.goal} Practices)</h3>
+                        <p style="font-size: 1rem; color: var(--color-text-light); margin-top: 0.5rem;">${phase.description}</p>
+                    </div>
+                `).join('')}
             </div>
+
+            <!-- Settings Section -->
+            <div id="section-settings" class="section ${currentTab === 'settings' ? 'active' : ''}">
+                <h2>Settings & Data Management</h2>
+                <div class="input-group" style="margin-bottom: 0.5rem;">
+                    <button id="export-btn" class="button">Export Data (JSON)</button>
+                    <button id="clear-btn" class="button" style="background-color: #dc2626;">Clear All Data</button>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--color-text-muted);">Warning: Clearing data cannot be undone and removes all practices and badges.</p>
+                
+                <h3>Import Data</h3>
+                <input type="file" id="import-file" accept="application/json" class="input" style="padding: 0.75rem 0.5rem;">
+                <button id="import-btn" class="button">Import JSON</button>
+            </div>
+
+            <!-- Journey Guide is now a separate section -->
           </div>
         `;
 
-        // Event listeners
-        document.getElementById('practice-form').addEventListener('submit', addPractice);
-        document.getElementById('practice-rating').addEventListener('input', updateRating);
+        // --- Event Listeners ---
+        document.getElementById('practice-form').addEventListener('submit', handleAddPractice);
+        document.getElementById('practice-intensity').addEventListener('input', () => updateSliderValue('intensity'));
+        document.getElementById('practice-physical').addEventListener('input', () => updateSliderValue('physical'));
+        document.getElementById('practice-mental').addEventListener('input', () => updateSliderValue('mental'));
         document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', switchTab));
-        // Use event delegation for delete buttons since they are rendered dynamically
-        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', deletePractice));
-        document.getElementById('new-prompt').addEventListener('click', () => {
-          document.getElementById('motivation-prompt').textContent = generatePrompt();
-        });
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeletePractice));
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.addEventListener('click', handleDurationPreset));
+        
+        // Settings Listeners
+        document.getElementById('export-btn').addEventListener('click', handleExportData);
+        document.getElementById('clear-btn').addEventListener('click', handleClearData);
+        document.getElementById('import-btn').addEventListener('click', handleImportData);
+
+        // Initial slider values
+        updateSliderValue('intensity');
+        updateSliderValue('physical');
+        updateSliderValue('mental');
+      }
+      
+      // --- HANDLERS ---
+      function updateSliderValue(name) {
+        document.getElementById(`${name}-value`).textContent = document.getElementById(`practice-${name}`).value;
+      }
+      
+      function handleDurationPreset(e) {
+          document.getElementById('practice-duration').value = e.target.dataset.duration;
       }
 
-      async function addPractice(e) {
+      async function handleAddPractice(e) {
         e.preventDefault();
         const notes = document.getElementById('practice-notes').value.trim();
-        const duration = parseInt(document.getElementById('practice-duration').value) || null;
-        const rating = parseInt(document.getElementById('practice-rating').value);
+        const duration = parseInt(document.getElementById('practice-duration').value) || 0;
+        const type = document.getElementById('practice-type').value;
+        const intensity = parseInt(document.getElementById('practice-intensity').value);
+        const physical = parseInt(document.getElementById('practice-physical').value);
+        const mental = parseInt(document.getElementById('practice-mental').value);
         const date = document.getElementById('practice-date').value;
         
-        if (notes) {
-          // ASYNCHRONOUS WRITE: Replaces localStorage write
-          await dbAddPractice({ id: Date.now(), notes, duration, rating, date });
-          
-          document.getElementById('practice-form').reset();
-          document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
-          // Re-render to show the new practice and update stats
-          render();
+        if (!notes || duration <= 0) {
+            alert("Please provide notes and a valid duration.");
+            return;
         }
-      }
 
-      function updateRating() {
-        document.getElementById('rating-value').textContent = document.getElementById('practice-rating').value;
+        const newPractice = {
+            id: Date.now(), 
+            notes, 
+            duration, 
+            type,
+            intensity, 
+            physical, 
+            mental, 
+            date
+        };
+        
+        await dbAddPractice(newPractice);
+        
+        // Clear the form
+        document.getElementById('practice-form').reset();
+        document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('practice-intensity').value = 5;
+        document.getElementById('practice-physical').value = 3;
+        document.getElementById('practice-mental').value = 3;
+        
+        // Switch to Dashboard and re-render
+        currentTab = 'dashboard';
+        render();
       }
 
       function switchTab(e) {
@@ -166,45 +343,108 @@
         render();
       }
 
-      async function deletePractice(e) {
+      async function handleDeletePractice(e) {
         const id = parseInt(e.target.dataset.id);
         
-        // ASYNCHRONOUS DELETE: Replaces localStorage filter/write
-        await dbDeletePractice(id);
-        
-        render();
+        if (confirm("Are you sure you want to delete this practice log?")) {
+            await dbDeletePractice(id);
+            // Re-render to update history and stats
+            render();
+        }
+      }
+      
+      function handleExportData() {
+        // Collect all data
+        const data = {
+            practices: practices,
+            profile: profile,
+            exportDate: new Date().toISOString()
+        };
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wrestling_journey_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
 
-      function getBadges(practices) {
-        const total = practices.length;
-        // The practice data now comes from the async read, so the logic is reusable.
-        const avgRating = practices.length ? practices.reduce((sum, p) => sum + (p.rating || 0), 0) / practices.length : 0;
-        const totalTime = practices.reduce((sum, p) => sum + (p.duration || 0), 0);
-        
-        return [
-          { name: 'First Practice', icon: '🏆', earned: total >= 1 },
-          { name: '10 Practices', icon: '🎖️', earned: total >= 10 },
-          { name: '50 Practices', icon: '🥇', earned: total >= 50 },
-          { name: 'High Performer', icon: '⭐', earned: avgRating >= 4 },
-          { name: 'Dedicated', icon: '⏰', earned: totalTime >= 1000 },
-        ];
+      async function handleClearData() {
+          if (confirm("THIS IS PERMANENT. Are you absolutely sure you want to clear ALL practice logs, badges, and progress?")) {
+              await clearAllData();
+              currentTab = 'dashboard';
+              alert("All data cleared!");
+              render();
+          }
       }
 
+      function handleImportData() {
+          const fileInput = document.getElementById('import-file');
+          const file = fileInput.files[0];
+          if (!file) {
+              alert("Please select a JSON file to import.");
+              return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+              try {
+                  const importedData = JSON.parse(e.target.result);
+                  if (importedData.practices && importedData.profile) {
+                      // Simple implementation: delete all current and insert imported
+                      await clearAllData();
+                      
+                      for (const p of importedData.practices) {
+                          await dbAddPractice(p);
+                      }
+                      await setProfile(importedData.profile);
+                      
+                      currentTab = 'dashboard';
+                      alert("Data imported successfully! Rendering...");
+                      render();
+                  } else {
+                      alert("Invalid file format. Must contain 'practices' and 'profile' arrays/objects.");
+                  }
+              } catch (error) {
+                  alert("Error parsing JSON file: " + error.message);
+              }
+          };
+          reader.readAsText(file);
+      }
+
+      // --- AI Prompt Generation (Needs update for TRUTH_DOC) ---
       function generatePrompt() {
-        // ... (prompts array remains the same) ...
-        const prompts = [
-          "Visualize yourself dominating the mat. What does victory feel like?",
-          "Think of your toughest opponent. How will you overcome them?",
-          "Remember why you started wrestling. Channel that passion today.",
-          "Break down your goals into small, actionable steps.",
-          "Embrace the grind. Every drop of sweat brings you closer to mastery.",
-          "Study great wrestlers. What can you learn from their technique?",
-          "Rest and recover. Your body needs fuel to perform.",
-          "Set a new personal record today, no matter how small.",
-          "Teamwork makes the dream work. Support your teammates.",
-          "Stay humble, stay hungry. The journey never ends."
+        const lastPractice = practices.length > 0 ? practices.slice(-1)[0] : null;
+        let basePrompt = "Generate a short, motivational prompt for a wrestler based on their training log. The tone should be coach-like, direct, and slightly challenging. Focus on the 'Reflect' section of the prompt.";
+        
+        if (lastPractice) {
+            basePrompt += ` The last practice was on ${new Date(lastPractice.date).toLocaleDateString()}, focusing on ${lastPractice.type} with ${lastPractice.intensity}/10 intensity. Notes: "${lastPractice.notes.substring(0, 100)}..."`;
+        } else {
+            basePrompt += " The wrestler is just starting out, encourage them to log their first session.";
+        }
+
+        const promptTemplate = [
+            "**Goal:** Define a single, measurable objective for your next session.",
+            "**Drill:** Pick one technique from your notes and drill it 50 times perfectly.",
+            "**Reflect:** Visualize your biggest weakness from the last session. What one thing would have changed the outcome?"
         ];
-        return prompts[Math.floor(Math.random() * prompts.length)];
+
+        return `
+            **AI-Ready Prompt Generator (Copy Below to AI Chat)**
+            ---
+            ${basePrompt}
+            ---
+            **Template:**
+            ${promptTemplate.join('\n')}
+        `;
+      }
+      
+      function handleGeneratePrompt() {
+          // This function is no longer needed as the prompt is generated on render, 
+          // but if we were to move the Motivate section to its own screen, it would be used here.
       }
 
       render();
