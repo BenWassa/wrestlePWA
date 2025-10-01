@@ -7,6 +7,14 @@ const STORE_PROFILE = 'profile'; // New store for global settings/badges
 
 let db;
 
+function normalizePractice(practice = {}) {
+  return {
+    ...practice,
+    aiStory: practice.aiStory ?? null,
+    storyGeneratedDate: practice.storyGeneratedDate ?? null
+  };
+}
+
 /**
  * Initializes the IndexedDB database.
  * @returns {Promise<IDBDatabase>}
@@ -51,7 +59,7 @@ export async function getPractices() {
     const transaction = dbInstance.transaction([STORE_PRACTICES], 'readonly');
     const store = transaction.objectStore(STORE_PRACTICES);
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => resolve(request.result.map(normalizePractice));
     request.onerror = () => reject(request.error);
   });
 }
@@ -61,8 +69,30 @@ export async function addPractice(practice) {
   return new Promise((resolve, reject) => {
     const transaction = dbInstance.transaction([STORE_PRACTICES], 'readwrite');
     const store = transaction.objectStore(STORE_PRACTICES);
-    const request = store.add(practice);
+    const request = store.add(normalizePractice(practice));
     request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function updatePractice(practice) {
+  const dbInstance = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = dbInstance.transaction([STORE_PRACTICES], 'readwrite');
+    const store = transaction.objectStore(STORE_PRACTICES);
+    const request = store.put(normalizePractice(practice));
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getPracticeById(id) {
+  const dbInstance = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = dbInstance.transaction([STORE_PRACTICES], 'readonly');
+    const store = transaction.objectStore(STORE_PRACTICES);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result ? normalizePractice(request.result) : null);
     request.onerror = () => reject(request.error);
   });
 }

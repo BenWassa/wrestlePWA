@@ -33,6 +33,7 @@
       getPractices,
       addPractice as dbAddPractice,
       deletePractice as dbDeletePractice,
+      updatePractice as dbUpdatePractice,
       getProfile,
       setProfile,
       clearAllData,
@@ -52,11 +53,27 @@
       let practices = [];
       let profile = {};
       let currentTab = 'dashboard';
+      let selectedPracticeId = null;
+      let showPromptForPractice = false;
+      let promptCopyState = 'idle';
+      let promptCopyError = '';
+      let storyDraft = '';
+      let editingStory = false;
+      let currentPromptText = '';
 
       // --- RENDER FUNCTION ---
       async function render() {
         practices = await getPractices();
         profile = await getProfile();
+
+        if (selectedPracticeId && !practices.some(p => p.id === selectedPracticeId)) {
+          selectedPracticeId = null;
+          showPromptForPractice = false;
+          promptCopyState = 'idle';
+          promptCopyError = '';
+          storyDraft = '';
+          editingStory = false;
+        }
 
         const { current: currentPhase, next: nextPhase } = dbGetPhase(practices.length);
 
@@ -76,6 +93,114 @@
 
         // Get comprehensive stats including streaks
         const fullStats = dbCalculatePracticeStats(practices);
+        const identityLevel = getCurrentIdentityLevel(practices.length);
+
+        const chronologicalPractices = practices.slice().sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          const validDateA = !isNaN(dateA.getTime());
+          const validDateB = !isNaN(dateB.getTime());
+          if (validDateA && validDateB) {
+            return dateA - dateB;
+          }
+          if (validDateA) return -1;
+          if (validDateB) return 1;
+          return (a.id || 0) - (b.id || 0);
+        });
+
+        const selectedPractice = selectedPracticeId
+          ? practices.find(p => p.id === selectedPracticeId)
+          : null;
+        const selectedPracticeIndex = selectedPractice
+          ? chronologicalPractices.findIndex(p => p.id === selectedPractice.id)
+          : -1;
+        const selectedPracticeNumber = selectedPracticeIndex >= 0
+          ? selectedPracticeIndex + 1
+          : null;
+        const promptPractice = selectedPractice
+          ? {
+              ...selectedPractice,
+              practiceNumber: selectedPractice.practiceNumber ?? selectedPracticeNumber ?? practices.length
+            }
+          : null;
+        const selectedPracticeHasStory = Boolean(
+          selectedPractice && typeof selectedPractice.aiStory === 'string' && selectedPractice.aiStory.trim().length
+        );
+        const shouldShowPrompt = Boolean(selectedPractice && showPromptForPractice);
+        const storyPromptText = shouldShowPrompt && promptPractice
+          ? generateStoryPrompt(promptPractice, fullStats, identityLevel)
+          : '';
+        currentPromptText = storyPromptText;
+        const storySavedDate = selectedPractice?.storyGeneratedDate
+          ? new Date(selectedPractice.storyGeneratedDate).toLocaleString()
+          : '';
+        const storyDraftTrimmed = storyDraft.trim();
+        const shouldShowStoryInput = Boolean(
+          selectedPractice && (
+            editingStory ||
+            (showPromptForPractice && !selectedPracticeHasStory && (promptCopyState === 'success' || promptCopyState === 'manual'))
+          )
+        );
+        const practiceDetailMarkup = selectedPractice
+          ? `
+            <div class="practice-detail">
+              <div class="practice-detail-header">
+                <div>
+                  <p class="eyebrow">${selectedPracticeNumber ? `Practice #${selectedPracticeNumber}` : 'Practice'}</p>
+                  <h3 class="practice-detail-title">${new Date(selectedPractice.date).toLocaleDateString()} · ${selectedPractice.type}</h3>
+                  <p class="practice-detail-notes">${escapeHTML(selectedPractice.notes)}</p>
+                </div>
+                <button id="close-practice-detail" class="button ghost small">Close</button>
+              </div>
+              <div class="practice-detail-metrics">
+                ${selectedPractice.duration ? `<span>${selectedPractice.duration} min</span>` : ''}
+                ${typeof selectedPractice.intensity === 'number' ? `<span>Intensity ${selectedPractice.intensity}/10</span>` : ''}
+                ${typeof selectedPractice.physical === 'number' ? `<span>Physical ${selectedPractice.physical}/10</span>` : ''}
+                ${typeof selectedPractice.mental === 'number' ? `<span>Mental ${selectedPractice.mental}/10</span>` : ''}
+              </div>
+              ${selectedPracticeHasStory ? `
+                <section class="story-card">
+                  <div class="story-card-header">
+                    <h3 class="story-card-title">Saved Story</h3>
+                    ${storySavedDate ? `<span class="story-card-date">Saved ${storySavedDate}</span>` : ''}
+                  </div>
+                  <div class="story-card-body">${escapeHTML(selectedPractice.aiStory)}</div>
+                  <div class="story-card-actions">
+                    <button id="edit-story" class="button secondary">Edit Story</button>
+                    <button id="regenerate-story-prompt" class="button ghost">Regenerate Prompt</button>
+                  </div>
+                </section>
+              ` : `
+                ${!shouldShowPrompt ? `<button id="generate-story-prompt" class="button full-width">Generate AI Prompt</button>` : ''}
+              `}
+              ${shouldShowPrompt ? `
+                <section class="prompt-section">
+                  <div class="prompt-header">
+                    <h3>AI Story Prompt</h3>
+                    <p class="prompt-instructions">Copy and paste this into Claude.ai, ChatGPT, or any AI assistant.</p>
+                  </div>
+                  <pre id="story-prompt" class="prompt-text">${escapeHTML(storyPromptText)}</pre>
+                  <div class="prompt-actions">
+                    <button id="copy-story-prompt" class="button secondary">${promptCopyState === 'success' ? 'Copied!' : 'Copy to Clipboard'}</button>
+                    ${selectedPracticeHasStory ? '' : `<button id="regenerate-story-prompt" class="button ghost">Regenerate Prompt</button>`}
+                  </div>
+                  ${promptCopyState === 'success' ? `<p class="copy-feedback success">Prompt copied. Paste into your favorite AI and bring the story back.</p>` : ''}
+                  ${(promptCopyState === 'error' || promptCopyState === 'manual') ? `<p class="copy-feedback error">${escapeHTML(promptCopyError)}</p>` : ''}
+                </section>
+              ` : ''}
+              ${shouldShowStoryInput ? `
+                <section class="story-input">
+                  <label for="ai-story-input">Paste AI-generated story here</label>
+                  <textarea id="ai-story-input" class="input textarea story-textarea" rows="10" placeholder="Paste the motivational story from the AI.">${escapeHTML(storyDraft)}</textarea>
+                  <div class="story-input-actions">
+                    <button id="save-story" class="button" ${storyDraftTrimmed ? '' : 'disabled'}>Save Story</button>
+                    <button id="cancel-story-edit" class="button ghost">Cancel</button>
+                  </div>
+                </section>
+              ` : ''}
+            </div>
+          `
+          : `<div class="practice-detail-empty">Select a practice to generate or edit its story.</div>`;
 
         const practiceCount = practices.length;
         const earnedBadges = (profile.earnedBadges || []).map(badge => ({ ...badge, id: String(badge.id) }))
@@ -346,24 +471,38 @@
                     <span class="phase-chip subtle">${practices.length} logged</span>
                   </div>
                   ${practices.length ? `
-                    <ul id="practice-list" class="practice-list">
-                      ${practices.slice().reverse().map(p => `
-                        <li class="practice-card" data-id="${p.id}">
-                          <div class="practice-card-header">
-                            <span class="practice-type">${p.type}</span>
-                            <time class="practice-date">${new Date(p.date).toLocaleDateString()}</time>
-                          </div>
-                          <p class="practice-notes">${p.notes}</p>
-                          <div class="practice-metrics">
-                            ${p.duration ? `<span>${p.duration} min</span>` : ''}
-                            ${p.intensity ? `<span>Intensity ${p.intensity}/10</span>` : ''}
-                            ${typeof p.physical === 'number' ? `<span>Physical ${p.physical}/10</span>` : ''}
-                            ${typeof p.mental === 'number' ? `<span>Mental ${p.mental}/10</span>` : ''}
-                          </div>
-                          <button class="delete-btn" data-id="${p.id}">Delete</button>
-                        </li>
-                      `).join('')}
-                    </ul>
+                    <div class="practice-history-layout">
+                      <div class="practice-history-list">
+                        <ul id="practice-list" class="practice-list">
+                          ${practices.slice().reverse().map(p => {
+                            const hasStory = Boolean(p.aiStory && p.aiStory.trim().length);
+                            const isSelected = selectedPracticeId === p.id;
+                            return `
+                              <li class="practice-card ${isSelected ? 'selected' : ''}" data-id="${p.id}">
+                                <div class="practice-card-header">
+                                  <span class="practice-type">${p.type}</span>
+                                  <div class="practice-card-meta">
+                                    ${hasStory ? '<span class="story-indicator" title="Story saved" aria-label="Story saved">✨</span>' : ''}
+                                    <time class="practice-date">${new Date(p.date).toLocaleDateString()}</time>
+                                  </div>
+                                </div>
+                                <p class="practice-notes">${p.notes}</p>
+                                <div class="practice-metrics">
+                                  ${p.duration ? `<span>${p.duration} min</span>` : ''}
+                                  ${p.intensity ? `<span>Intensity ${p.intensity}/10</span>` : ''}
+                                  ${typeof p.physical === 'number' ? `<span>Physical ${p.physical}/10</span>` : ''}
+                                  ${typeof p.mental === 'number' ? `<span>Mental ${p.mental}/10</span>` : ''}
+                                </div>
+                                <button class="delete-btn" data-id="${p.id}">Delete</button>
+                              </li>
+                            `;
+                          }).join('')}
+                        </ul>
+                      </div>
+                      <div class="practice-detail-panel ${selectedPractice ? 'active' : ''}">
+                        ${practiceDetailMarkup}
+                      </div>
+                    </div>
                   ` : '<div class="empty">No sessions logged yet. Start with today\'s practice.</div>'}
                 </article>
               </section>
@@ -503,6 +642,55 @@
         document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeletePractice));
         document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', handleDurationPreset));
         document.querySelectorAll('[data-switch-to]').forEach(btn => btn.addEventListener('click', quickSwitch));
+        const practiceListElement = document.getElementById('practice-list');
+        if (practiceListElement) {
+          practiceListElement.addEventListener('click', handlePracticeListClick);
+        }
+        const closeDetailBtn = document.getElementById('close-practice-detail');
+        if (closeDetailBtn) {
+          closeDetailBtn.addEventListener('click', () => {
+            selectedPracticeId = null;
+            showPromptForPractice = false;
+            promptCopyState = 'idle';
+            promptCopyError = '';
+            storyDraft = '';
+            editingStory = false;
+            render();
+          });
+        }
+        const generatePromptBtn = document.getElementById('generate-story-prompt');
+        if (generatePromptBtn) {
+          generatePromptBtn.addEventListener('click', handleGenerateStoryPrompt);
+        }
+        const regeneratePromptBtn = document.getElementById('regenerate-story-prompt');
+        if (regeneratePromptBtn) {
+          regeneratePromptBtn.addEventListener('click', handleRegenerateStoryPrompt);
+        }
+        const copyPromptBtn = document.getElementById('copy-story-prompt');
+        if (copyPromptBtn) {
+          copyPromptBtn.addEventListener('click', handleCopyStoryPrompt);
+        }
+        const editStoryBtn = document.getElementById('edit-story');
+        if (editStoryBtn) {
+          editStoryBtn.addEventListener('click', handleEditStory);
+        }
+        const cancelStoryBtn = document.getElementById('cancel-story-edit');
+        if (cancelStoryBtn) {
+          cancelStoryBtn.addEventListener('click', handleCancelStoryEdit);
+        }
+        const saveStoryBtn = document.getElementById('save-story');
+        if (saveStoryBtn) {
+          saveStoryBtn.addEventListener('click', handleSaveStory);
+        }
+        const storyTextarea = document.getElementById('ai-story-input');
+        if (storyTextarea) {
+          storyTextarea.value = storyDraft;
+          storyTextarea.addEventListener('input', handleStoryDraftInput);
+          const saveButton = document.getElementById('save-story');
+          if (saveButton) {
+            saveButton.disabled = !storyDraft.trim();
+          }
+        }
         const heroButton = document.getElementById('hero-log-btn');
         if (heroButton) {
           heroButton.addEventListener('click', () => {
@@ -555,14 +743,17 @@
         }
 
         const newPractice = {
-            id: Date.now(), 
-            notes, 
-            duration, 
+            id: Date.now(),
+            notes,
+            duration,
             type,
-            intensity, 
-            physical, 
-            mental, 
-            date
+            intensity,
+            physical,
+            mental,
+            date,
+            practiceNumber: practices.length + 1,
+            aiStory: null,
+            storyGeneratedDate: null
         };
         
         await dbAddPractice(newPractice);
@@ -585,10 +776,19 @@
       }
 
       async function handleDeletePractice(e) {
+        e.stopPropagation();
         const id = parseInt(e.target.dataset.id);
-        
+
         if (confirm("Are you sure you want to delete this practice log?")) {
             await dbDeletePractice(id);
+            if (selectedPracticeId === id) {
+                selectedPracticeId = null;
+                showPromptForPractice = false;
+                promptCopyState = 'idle';
+                promptCopyError = '';
+                storyDraft = '';
+                editingStory = false;
+            }
             // Re-render to update history and stats
             render();
         }
@@ -662,6 +862,178 @@
               }
           };
           reader.readAsText(file);
+      }
+
+      function handlePracticeListClick(e) {
+        if (e.target.closest('.delete-btn')) {
+          return;
+        }
+        const card = e.target.closest('.practice-card');
+        if (!card) return;
+        const id = parseInt(card.dataset.id);
+        if (Number.isNaN(id)) return;
+        if (selectedPracticeId === id) {
+          return;
+        }
+        selectedPracticeId = id;
+        showPromptForPractice = false;
+        promptCopyState = 'idle';
+        promptCopyError = '';
+        storyDraft = '';
+        editingStory = false;
+        render();
+      }
+
+      function getSelectedPractice() {
+        return practices.find(p => p.id === selectedPracticeId) || null;
+      }
+
+      function handleGenerateStoryPrompt() {
+        if (!getSelectedPractice()) return;
+        showPromptForPractice = true;
+        promptCopyState = 'idle';
+        promptCopyError = '';
+        storyDraft = '';
+        editingStory = false;
+        render();
+      }
+
+      function handleRegenerateStoryPrompt() {
+        if (!getSelectedPractice()) return;
+        showPromptForPractice = true;
+        promptCopyState = 'idle';
+        promptCopyError = '';
+        storyDraft = '';
+        editingStory = false;
+        render();
+      }
+
+      async function handleCopyStoryPrompt() {
+        if (!currentPromptText) {
+          promptCopyState = 'error';
+          promptCopyError = 'Prompt not ready. Regenerate and try again.';
+          render();
+          return;
+        }
+        try {
+          if (!navigator.clipboard) {
+            throw new Error('Clipboard access is unavailable.');
+          }
+          await navigator.clipboard.writeText(currentPromptText);
+          promptCopyState = 'success';
+          promptCopyError = '';
+        } catch (error) {
+          console.error('Copy failed', error);
+          promptCopyState = 'manual';
+          promptCopyError = 'Could not copy automatically. Select the text above and copy it manually.';
+        }
+        render();
+      }
+
+      function handleEditStory() {
+        const practice = getSelectedPractice();
+        if (!practice) return;
+        editingStory = true;
+        showPromptForPractice = false;
+        promptCopyState = 'idle';
+        promptCopyError = '';
+        storyDraft = practice.aiStory || '';
+        render();
+      }
+
+      function handleCancelStoryEdit() {
+        editingStory = false;
+        storyDraft = '';
+        if (!getSelectedPractice()?.aiStory) {
+          showPromptForPractice = false;
+        }
+        promptCopyState = 'idle';
+        promptCopyError = '';
+        render();
+      }
+
+      function handleStoryDraftInput(e) {
+        storyDraft = e.target.value;
+        const saveButton = document.getElementById('save-story');
+        if (saveButton) {
+          saveButton.disabled = !storyDraft.trim();
+        }
+      }
+
+      async function handleSaveStory() {
+        const practice = getSelectedPractice();
+        if (!practice) return;
+        const draft = storyDraft.trim();
+        if (!draft) {
+          alert('Paste or write your story before saving.');
+          return;
+        }
+        const updatedPractice = {
+          ...practice,
+          aiStory: draft,
+          storyGeneratedDate: new Date().toISOString()
+        };
+        try {
+          await dbUpdatePractice(updatedPractice);
+          showPromptForPractice = false;
+          promptCopyState = 'idle';
+          promptCopyError = '';
+          storyDraft = '';
+          editingStory = false;
+          render();
+        } catch (error) {
+          console.error('Error saving story', error);
+          alert('Could not save the story. Please try again.');
+        }
+      }
+
+      function escapeHTML(str = '') {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function generateStoryPrompt(practice, userStats, identityLevel) {
+        const totalHoursValue = Number.isFinite(userStats.totalHours) ? userStats.totalHours : 0;
+        const formattedHours = totalHoursValue.toFixed(1);
+        const streak = userStats.streaks && Number.isFinite(userStats.streaks.current)
+          ? userStats.streaks.current
+          : 0;
+        const practiceNumber = practice.practiceNumber ?? userStats.practiceCount ?? '';
+
+        return `You are a motivational wrestling journey storyteller. Generate an engaging practice story.
+
+WRESTLER PROFILE:
+- Total Practices: ${userStats.practiceCount}
+- Total Hours: ${formattedHours}
+- Current Level: ${identityLevel.name}
+- Current Streak: ${streak} days
+- Identity Phase: ${identityLevel.narrative}
+
+TODAY'S PRACTICE:
+- Date: ${practice.date}
+- Duration: ${practice.duration} minutes
+- Type: ${practice.type}
+- Intensity: ${practice.intensity}/10
+- Physical Feel: ${practice.physical}/10
+- Mental Feel: ${practice.mental}/10
+
+NOTES:
+${practice.notes}
+
+Generate a compelling, motivational story (200-300 words) about this practice session. Include:
+- Acknowledgment of specific challenges (intensity, physical feel)
+- Celebration of showing up and what they worked on
+- Context of their journey (practice count, level, progress)
+- Forward-looking motivation toward next milestone
+- Use second-person ("you") narrative
+- Make it inspiring but realistic
+- Reference their identity level context
+
+Format: Start with a bold title like "Practice #${practiceNumber}: [Your Title]"`;
       }
 
       // --- AI Prompt Generation (Needs update for TRUTH_DOC) ---
