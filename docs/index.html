@@ -393,35 +393,91 @@
                 </article>
               </section>
 
-              <!-- Badges -->
+              <!-- Badges (Earned Only) -->
               <section id="section-badges" class="section ${currentTab === 'badges' ? 'active' : ''}">
-                <article class="panel">
+                <article class="panel badge-panel">
                   <div class="panel-header">
-                    <div>
-                      <h2>Earned badges</h2>
-                      <p class="panel-subtitle">Consistency over hype. Each badge marks a real milestone.</p>
-                    </div>
+                    <h2>Your Badges</h2>
+                    <p class="panel-subtitle">Badges appear only when earned. No previews, no teasing.</p>
                   </div>
-                  <div class="badge-feed">
+                  <div class="badge-list">
                     ${earnedBadges.length ? earnedBadges.map(badge => {
                       const badgeInfo = ALL_BADGES.find(item => item.id === badge.id);
                       return `
-                        <div class="badge-card earned">
-                          <span class="badge-icon">${badgeInfo ? badgeInfo.icon : '🥋'}</span>
-                          <div class="badge-copy">
-                            <h3>${badgeInfo ? badgeInfo.name : 'Badge'}</h3>
-                            ${badgeInfo ? `<p class="badge-description">${badgeInfo.description}</p>` : ''}
-                            <p class="badge-earned">Earned ${new Date(badge.earnedDate).toLocaleDateString()} · Practice #${badge.practiceNumber}</p>
+                        <div class="badge-item">
+                          <span class="badge-emoji">${badgeInfo ? badgeInfo.icon : '🥋'}</span>
+                          <div class="badge-info">
+                            <span class="badge-name">${badgeInfo ? badgeInfo.name : 'Badge'}</span>
+                            ${badgeInfo && badgeInfo.description ? `<span class="badge-detail">${badgeInfo.description}</span>` : ''}
                           </div>
                         </div>
                       `;
-                    }).join('') : '<p class="empty">Earned badges show up here. Keep logging.</p>'}
+                    }).join('') : `
+                      <div class="empty-badges">
+                        <p class="empty-message">🏅 Your first badge awaits.</p>
+                        <p class="empty-hint">Keep logging practices. Badges appear when you earn them.</p>
+                      </div>
+                    `}
+                  </div>
+                  ${earnedBadges.length > 0 ? `
+                    <p class="badge-footer">More badges earned as you continue your journey.</p>
+                  ` : ''}
+                </article>
+              </section>
+
+              <!-- Journey Guide (Pure Inspiration) -->
+              <section id="section-guide" class="section ${currentTab === 'guide' ? 'active' : ''}">
+                <article class="panel journey-panel">
+                  <div class="panel-header">
+                    <h2>The Wrestling Journey</h2>
+                    <p class="panel-subtitle">No numbers. No metrics. Just the character of each phase.</p>
+                  </div>
+                  <div class="journey-phases">
+                    <div class="journey-phase">
+                      <h3 class="phase-name">THE AMATEUR</h3>
+                      <p class="phase-story">
+                        This is where everyone starts. You're awkward. You're slow. You don't know what you're doing. 
+                        But you're showing up. That's what matters. The discomfort is building something real.
+                      </p>
+                    </div>
+                    
+                    <div class="journey-phase">
+                      <h3 class="phase-name">THE GRINDER</h3>
+                      <p class="phase-story">
+                        You're not dying anymore. Technique starts to click. You have moves that sometimes work. 
+                        This is the foundation phase. You're building habits that will carry you through everything.
+                      </p>
+                    </div>
+                    
+                    <div class="journey-phase">
+                      <h3 class="phase-name">THE TECHNICIAN</h3>
+                      <p class="phase-story">
+                        Now it gets fun. You're competitive. Chain wrestling flows. You're thinking ahead. 
+                        You understand setups, counters, transitions. You're a real wrestler now.
+                      </p>
+                    </div>
+                    
+                    <div class="journey-phase">
+                      <h3 class="phase-name">THE COMPETITOR</h3>
+                      <p class="phase-story">
+                        Competition is where you test yourself. Win or lose, you show up. You push through fear. 
+                        The mat is your arena. This phase defines your character more than your record.
+                      </p>
+                    </div>
+                    
+                    <div class="journey-phase">
+                      <h3 class="phase-name">THE VETERAN</h3>
+                      <p class="phase-story">
+                        You've put in years. You've survived injuries, losses, doubts. You're not chasing glory anymore—you're 
+                        refining mastery. The young wrestlers watch how you move. Your presence teaches.
+                      </p>
+                    </div>
                   </div>
                 </article>
               </section>
 
-              <!-- Journey Guide -->
-              <section id="section-guide" class="section ${currentTab === 'guide' ? 'active' : ''}">
+              <!-- Original Journey Guide -->
+              <section id="section-guide-old" class="section" style="display: none;">
                 <article class="panel">
                   <div class="panel-header">
                     <h2>Journey guide</h2>
