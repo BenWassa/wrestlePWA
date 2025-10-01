@@ -26,13 +26,22 @@
 <body>
   <div id="root"></div>
   
-  <script>
+  <!-- Import the IndexedDB module (type="module" is required for 'import') -->
+  <script type="module" src="db.js"></script>
+  
+  <script type="module">
+    // Import the functions from db.js
+    import { getPractices, addPractice as dbAddPractice, deletePractice as dbDeletePractice } from './db.js';
+    
     document.addEventListener('DOMContentLoaded', () => {
       const root = document.getElementById('root');
-      let practices = JSON.parse(localStorage.getItem('practices') || '[]');
+      let practices = []; // Practices will be loaded asynchronously
       let currentTab = 'log';
 
-      function render() {
+      async function render() {
+        // ASYNCHRONOUS LOAD: Replaces localStorage read
+        practices = await getPractices(); 
+        
         root.innerHTML = `
           <div class="app">
             <h1 class="title">Wrestling Journey</h1>
@@ -106,7 +115,7 @@
             <div id="section-reward" class="section ${currentTab === 'reward' ? 'active' : ''}">
               <h2>Badges & Achievements</h2>
               <div class="badges">
-                ${getBadges().map(badge => `<div class="badge ${badge.earned ? 'earned' : ''}">${badge.icon} ${badge.name}</div>`).join('')}
+                ${getBadges(practices).map(badge => `<div class="badge ${badge.earned ? 'earned' : ''}">${badge.icon} ${badge.name}</div>`).join('')}
               </div>
             </div>
             
@@ -123,13 +132,14 @@
         document.getElementById('practice-form').addEventListener('submit', addPractice);
         document.getElementById('practice-rating').addEventListener('input', updateRating);
         document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', switchTab));
+        // Use event delegation for delete buttons since they are rendered dynamically
         document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', deletePractice));
         document.getElementById('new-prompt').addEventListener('click', () => {
           document.getElementById('motivation-prompt').textContent = generatePrompt();
         });
       }
 
-      function addPractice(e) {
+      async function addPractice(e) {
         e.preventDefault();
         const notes = document.getElementById('practice-notes').value.trim();
         const duration = parseInt(document.getElementById('practice-duration').value) || null;
@@ -137,10 +147,12 @@
         const date = document.getElementById('practice-date').value;
         
         if (notes) {
-          practices.push({ id: Date.now(), notes, duration, rating, date });
-          localStorage.setItem('practices', JSON.stringify(practices));
+          // ASYNCHRONOUS WRITE: Replaces localStorage write
+          await dbAddPractice({ id: Date.now(), notes, duration, rating, date });
+          
           document.getElementById('practice-form').reset();
           document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
+          // Re-render to show the new practice and update stats
           render();
         }
       }
@@ -154,15 +166,18 @@
         render();
       }
 
-      function deletePractice(e) {
+      async function deletePractice(e) {
         const id = parseInt(e.target.dataset.id);
-        practices = practices.filter(p => p.id !== id);
-        localStorage.setItem('practices', JSON.stringify(practices));
+        
+        // ASYNCHRONOUS DELETE: Replaces localStorage filter/write
+        await dbDeletePractice(id);
+        
         render();
       }
 
-      function getBadges() {
+      function getBadges(practices) {
         const total = practices.length;
+        // The practice data now comes from the async read, so the logic is reusable.
         const avgRating = practices.length ? practices.reduce((sum, p) => sum + (p.rating || 0), 0) / practices.length : 0;
         const totalTime = practices.reduce((sum, p) => sum + (p.duration || 0), 0);
         
@@ -176,6 +191,7 @@
       }
 
       function generatePrompt() {
+        // ... (prompts array remains the same) ...
         const prompts = [
           "Visualize yourself dominating the mat. What does victory feel like?",
           "Think of your toughest opponent. How will you overcome them?",
