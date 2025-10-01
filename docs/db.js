@@ -291,8 +291,20 @@ export function getPhase(practiceCount) {
         }
     }
 
+
     const currentIndex = PHASES.findIndex(p => p.id === currentPhase.id);
-    const nextPhase = currentIndex >= 0 && currentIndex < PHASES.length - 1 ? PHASES[currentIndex + 1] : null;
+    // If we're before reaching the current phase's goal, 'next' should be the current phase
+    // Once count >= currentPhase.goal, next should move to the following phase (if any)
+    let nextPhase = null;
+    if (currentIndex >= 0 && currentIndex < PHASES.length - 1) {
+        if (count >= currentPhase.goal) {
+            nextPhase = PHASES[currentIndex + 1];
+        } else {
+            nextPhase = currentPhase;
+        }
+    } else {
+        nextPhase = null;
+    }
 
     const rangeStart = currentPhase.start || 0;
     const rangeEnd = Number.isFinite(currentPhase.goal) ? currentPhase.goal : rangeStart + 1;
