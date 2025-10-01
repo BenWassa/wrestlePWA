@@ -207,16 +207,19 @@ export function getPhase(practiceCount) {
     
     // Find current phase
     for (let i = 0; i < PHASES.length; i++) {
-        if (practiceCount < PHASES[i].goal) {
+        if (practiceCount <= PHASES[i].goal) {
             currentPhase = PHASES[i];
-            nextPhase = i + 1 < PHASES.length ? PHASES[i + 1] : null;
+            
+            // If we're exactly at the goal, next is the next phase
+            if (practiceCount === PHASES[i].goal && i + 1 < PHASES.length) {
+                nextPhase = PHASES[i + 1];
+            } else {
+                nextPhase = PHASES[i];
+            }
             
             // Calculate progress within current phase
             const previousGoal = i > 0 ? PHASES[i - 1].goal : 0;
-            const currentGoal = PHASES[i].goal;
-            const progressInPhase = practiceCount - previousGoal;
-            const phaseSize = currentGoal - previousGoal;
-            progress = Math.round((progressInPhase / phaseSize) * 100);
+            progress = Math.round(((practiceCount - previousGoal) / PHASES[i].goal) * 100);
             break;
         }
     }
@@ -224,7 +227,7 @@ export function getPhase(practiceCount) {
     // If we've completed all phases
     if (practiceCount >= PHASES[PHASES.length - 1].goal) {
         currentPhase = PHASES[PHASES.length - 1];
-        nextPhase = null;
+        nextPhase = PHASES[PHASES.length - 1];
         progress = 100;
     }
     
