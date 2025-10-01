@@ -70,7 +70,7 @@
         };
 
         const practiceCount = practices.length;
-        const earnedBadges = (profile.earnedBadges || []).map(badge => ({ ...badge, id: String(badge.id) }))
+        const earnedBadges = (profile.earnedBadges || []).map(badge => ({ ...badge, id: Number(badge.id) }))
           .sort((a, b) => new Date(a.earnedDate) - new Date(b.earnedDate));
         const latestBadges = earnedBadges.slice(-3).reverse();
 
