@@ -307,9 +307,16 @@ export function getPhase(practiceCount) {
     }
 
     const rangeStart = currentPhase.start || 0;
-    const rangeEnd = Number.isFinite(currentPhase.goal) ? currentPhase.goal : rangeStart + 1;
-    const denominator = Math.max(1, rangeEnd - rangeStart);
-    const rawProgress = Math.round(((count - rangeStart) / denominator) * 100);
+    // Use the phase's goal as the denominator (matches tests expecting 25/50 -> 30)
+    const denom = Number.isFinite(currentPhase.goal) ? Math.max(1, currentPhase.goal) : Math.max(1, (currentPhase.goal - rangeStart));
+    let rawProgress = Math.round(((count - rangeStart) / denom) * 100);
+
+    // If we're in the final phase and we've reached or passed its goal, progress is 100
+    const isFinalPhase = currentIndex === PHASES.length - 1;
+    if (isFinalPhase && Number.isFinite(currentPhase.goal) && count >= currentPhase.goal) {
+        rawProgress = 100;
+    }
+
     const progress = Math.min(100, Math.max(0, rawProgress));
 
     return { current: currentPhase, next: nextPhase, progress };
