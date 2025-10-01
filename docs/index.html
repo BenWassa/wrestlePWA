@@ -40,7 +40,11 @@
       checkBadges as dbCheckBadges,
       PHASES,
       getPhase as dbGetPhase,
-      calculatePracticeStats as dbCalculatePracticeStats
+      calculatePracticeStats as dbCalculatePracticeStats,
+      IDENTITY_LEVELS,
+      getCurrentIdentityLevel,
+      getIdentityProgress,
+      MILESTONES
     } from './db.js';
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -101,6 +105,9 @@
           : 'Veteran status — keep sharpening your edge.';
         const totalHours = (stats.totalTime / 60).toFixed(1);
         const lastPractice = practices.length ? practices[practices.length - 1] : null;
+
+        // Calculate identity level progress
+        const identityProgress = getIdentityProgress(practiceCount);
 
         root.innerHTML = `
           <div class="app">
@@ -188,25 +195,40 @@
                 <article class="panel">
                   <div class="panel-header">
                     <div>
-                      <h3>Achievements</h3>
-                      <p class="panel-subtitle">Milestones and focus badges — what you earned and why it matters.</p>
+                      <h3>Journey Status</h3>
+                      <p class="panel-subtitle">Your current identity level in the wrestling journey.</p>
                     </div>
-                    <button class="button-link" data-switch-to="badges">See all</button>
+                    <button class="button-link" data-switch-to="badges">View milestones</button>
                   </div>
-                  <div class="badge-shelf">
-                    ${latestBadges.length ? latestBadges.map(badge => {
-                      const badgeInfo = ALL_BADGES.find(item => item.id === badge.id);
-                      return `
-                        <div class="badge-token">
-                          <span class="badge-icon">${badgeInfo ? badgeInfo.icon : '🥋'}</span>
-                          <div class="badge-copy">
-                            <p class="badge-name">${badgeInfo ? badgeInfo.name : 'Badge'}</p>
-                            ${badgeInfo && badgeInfo.description ? `<p class="badge-desc">${badgeInfo.description}</p>` : ''}
-                            <p class="badge-meta">Practice #${badge.practiceNumber} · ${new Date(badge.earnedDate).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      `;
-                    }).join('') : '<p class="empty">Log consistently to earn your first achievement.</p>'}
+                  <div class="identity-display">
+                    <div class="current-level" style="border-color: ${identityProgress.currentLevel.color}; background: linear-gradient(135deg, ${identityProgress.currentLevel.color}15, ${identityProgress.currentLevel.color}08);">
+                      <div class="level-badge" style="background: ${identityProgress.currentLevel.color};">
+                        ${identityProgress.currentLevel.name.charAt(0)}
+                      </div>
+                      <div class="level-info">
+                        <h4>${identityProgress.currentLevel.name}</h4>
+                        <p class="level-description">${identityProgress.currentLevel.description}</p>
+                        <p class="level-narrative">${identityProgress.narrative}</p>
+                      </div>
+                    </div>
+
+                    ${identityProgress.nextLevel ? `
+                    <div class="progress-to-next">
+                      <div class="progress-header">
+                        <span class="progress-label">Progress to ${identityProgress.nextLevel.name}</span>
+                        <span class="progress-count">${identityProgress.practicesToNext} practices to go</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${identityProgress.progressPercent}%; background: ${identityProgress.nextLevel.color};"></div>
+                      </div>
+                      <p class="progress-milestone">${practiceCount} of ${identityProgress.nextLevel.threshold} practices</p>
+                    </div>
+                    ` : `
+                    <div class="max-level">
+                      <p class="max-level-message">🏆 You've reached the highest level: ${identityProgress.currentLevel.name}</p>
+                      <p class="max-level-subtitle">Continue your journey — every practice makes you stronger.</p>
+                    </div>
+                    `}
                   </div>
                 </article>
               </section>

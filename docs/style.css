@@ -775,3 +775,139 @@ input[type="range"]::-moz-range-thumb {
 .modal-actions .button {
   min-width: 100px;
 }
+
+/* Identity Level Display */
+.identity-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.current-level {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: var(--border-radius-card);
+  border: 2px solid;
+  transition: all 0.2s ease;
+}
+
+.level-badge {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.level-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+.level-description {
+  margin: 0 0 0.75rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.level-narrative {
+  margin: 0;
+  color: var(--color-text-light);
+  font-style: italic;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.progress-to-next {
+  padding: 1.25rem;
+  background: var(--color-card-bg);
+  border-radius: var(--border-radius-card);
+  border: 1px solid var(--color-border);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.progress-label {
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+.progress-count {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--color-input-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-milestone {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.max-level {
+  padding: 1.25rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border-radius: var(--border-radius-card);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-align: center;
+}
+
+.max-level-message {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.max-level-subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .current-level {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .level-info h4 {
+    font-size: 1rem;
+  }
+
+  .progress-header {
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
+  }
+}

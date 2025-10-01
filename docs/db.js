@@ -82,7 +82,8 @@ export async function deletePractice(id) {
 
 const DEFAULT_PROFILE = {
     key: 'user',
-    earnedBadges: [], // [{ id, earnedDate, practiceNumber }]
+    earnedBadges: [], // [{ id, earnedDate, practiceNumber }] - legacy
+    earnedMilestones: [], // [{ id, name, earnedDate, practiceNumber, level, description }] - new system
     currentPhase: 1,
     streaks: { days: 0, weeks: 0 }
 };
@@ -220,7 +221,204 @@ function calculatePracticeStats(practices) {
     };
 }
 
-// Comprehensive badge set matching Badge_system.md and TRUTH_DOC.md
+// Identity levels system - replaces discrete badges with belt-rank progression
+export const IDENTITY_LEVELS = [
+    // Amateur Level (0-49 practices) - Getting started
+    {
+        id: 'amateur',
+        name: 'Amateur',
+        description: 'The beginning of your wrestling journey. Focus on showing up consistently.',
+        color: '#9ca3af', // Gray
+        threshold: 0,
+        narrative: 'You\'re in the Amateur phase: building the foundation of consistency.'
+    },
+
+    // Grinder Level (50-199 practices) - Building habits
+    {
+        id: 'grinder',
+        name: 'Grinder',
+        description: 'You\'ve proven you can show up. Now it\'s about grinding through the tough days.',
+        color: '#f59e0b', // Amber
+        threshold: 50,
+        narrative: 'You\'re in the Grinder phase: turning consistency into unbreakable habits.'
+    },
+
+    // Technician Level (200-499 practices) - Skill development
+    {
+        id: 'technician',
+        name: 'Technician',
+        description: 'Technical mastery is within reach. Every practice builds toward expertise.',
+        color: '#3b82f6', // Blue
+        threshold: 200,
+        narrative: 'You\'re in the Technician phase: refining your craft through deliberate practice.'
+    },
+
+    // Competitor Level (500-1499 practices) - Competition ready
+    {
+        id: 'competitor',
+        name: 'Competitor',
+        description: 'You\'re competition-ready. The mat is your arena, and you belong here.',
+        color: '#8b5cf6', // Purple
+        threshold: 500,
+        narrative: 'You\'re in the Competitor phase: ready to test your skills against others.'
+    },
+
+    // Veteran Level (1500+ practices) - Mastery achieved
+    {
+        id: 'veteran',
+        name: 'Veteran',
+        description: 'A true veteran of the mats. Your experience shapes the next generation.',
+        color: '#ef4444', // Red
+        threshold: 1500,
+        narrative: 'You\'re in the Veteran phase: a master who inspires through example.'
+    }
+];
+
+// Milestone achievements within levels - these are the "badges" but tied to identity
+export const MILESTONES = [
+    // Early frequent milestones (Amateur level)
+    { id: 'first_practice', name: 'Day One', threshold: 1, level: 'amateur', description: 'Your first practice logged.' },
+    { id: 'first_week', name: 'First Week', threshold: 5, level: 'amateur', description: 'Five practices in your first week.' },
+    { id: 'first_month', name: 'First Month', threshold: 20, level: 'amateur', description: 'Twenty practices - a full month of commitment.' },
+
+    // Transition to Grinder
+    { id: 'grinder_unlocked', name: 'Grinder Unlocked', threshold: 50, level: 'grinder', description: 'You\'ve earned your Grinder status.' },
+
+    // Mid-level milestones (Grinder level)
+    { id: 'century_club', name: 'Century Club', threshold: 100, level: 'grinder', description: 'One hundred practices logged.' },
+    { id: 'quarter_season', name: 'Quarter Season', threshold: 150, level: 'grinder', description: 'One hundred fifty practices - serious commitment.' },
+
+    // Transition to Technician
+    { id: 'technician_unlocked', name: 'Technician Unlocked', threshold: 200, level: 'technician', description: 'You\'ve earned your Technician status.' },
+
+    // Advanced milestones (Technician level)
+    { id: 'flow_unlocked', name: 'Flow Unlocked', threshold: 300, level: 'technician', description: 'Three hundred practices - entering flow state.' },
+    { id: 'halfway_master', name: 'Halfway to Master', threshold: 400, level: 'technician', description: 'Four hundred practices of deliberate improvement.' },
+
+    // Transition to Competitor
+    { id: 'competitor_unlocked', name: 'Competitor Unlocked', threshold: 500, level: 'competitor', description: 'You\'ve earned your Competitor status.' },
+
+    // Competition-level milestones
+    { id: 'grind_veteran', name: 'Grind Veteran', threshold: 750, level: 'competitor', description: 'Seven hundred fifty practices - veteran of the grind.' },
+    { id: 'competitor_complete', name: 'Competitor Complete', threshold: 1000, level: 'competitor', description: 'One thousand practices - advanced competitor.' },
+
+    // Transition to Veteran
+    { id: 'veteran_unlocked', name: 'Veteran Unlocked', threshold: 1500, level: 'veteran', description: 'You\'ve earned your Veteran status.' },
+
+    // Veteran milestones
+    { id: 'advanced_complete', name: 'Advanced Complete', threshold: 2000, level: 'veteran', description: 'Two thousand practices - elite territory.' },
+    { id: 'veteran_status', name: 'Veteran Status', threshold: 2500, level: 'veteran', description: 'Keep logging beyond two thousand practices.' },
+
+    // Special time-based milestones
+    { id: 'ten_hours', name: 'Ten Hours', thresholdHours: 10, level: 'amateur', description: 'More than ten hours of mat time recorded.' },
+    { id: 'twentyfive_hours', name: 'Twenty-Five Hours', thresholdHours: 25, level: 'grinder', description: 'Twenty-five hours of focused training.' },
+    { id: 'fifty_hours', name: 'Fifty Hours', thresholdHours: 50, level: 'technician', description: 'Fifty hours of documented work.' },
+    { id: 'one_hundred_hours', name: 'One Hundred Hours', thresholdHours: 100, level: 'competitor', description: 'One hundred hours of training time.' },
+
+    // Streak milestones
+    { id: 'three_day_streak', name: 'Three Day Streak', thresholdStreak: 3, level: 'amateur', description: 'Three consecutive training days.' },
+    { id: 'five_day_streak', name: 'Five Day Streak', thresholdStreak: 5, level: 'amateur', description: 'Five straight days of work.' },
+    { id: 'ten_day_streak', name: 'Ten Day Streak', thresholdStreak: 10, level: 'grinder', description: 'Ten consecutive training days.' },
+    { id: 'two_week_consistent', name: 'Two Weeks Consistent', thresholdWindow: { days: 14, min: 6 }, level: 'grinder', description: 'Six or more practices in two weeks.' },
+    { id: 'month_of_work', name: 'Month of Work', thresholdWindow: { days: 30, min: 12 }, level: 'technician', description: 'Twelve or more practices this month.' }
+];
+
+// Identity level functions
+export function getCurrentIdentityLevel(practiceCount) {
+    // Find the highest level the user has reached
+    for (let i = IDENTITY_LEVELS.length - 1; i >= 0; i--) {
+        if (practiceCount >= IDENTITY_LEVELS[i].threshold) {
+            return IDENTITY_LEVELS[i];
+        }
+    }
+    return IDENTITY_LEVELS[0]; // Default to Amateur
+}
+
+export function getNextIdentityLevel(practiceCount) {
+    // Find the next level to unlock
+    for (let level of IDENTITY_LEVELS) {
+        if (practiceCount < level.threshold) {
+            return level;
+        }
+    }
+    return null; // Already at max level
+}
+
+export function getIdentityProgress(practiceCount) {
+    const currentLevel = getCurrentIdentityLevel(practiceCount);
+    const nextLevel = getNextIdentityLevel(practiceCount);
+
+    if (!nextLevel) {
+        // At max level
+        return {
+            currentLevel,
+            nextLevel: null,
+            progressPercent: 100,
+            practicesToNext: 0,
+            narrative: currentLevel.narrative
+        };
+    }
+
+    const practicesInCurrentLevel = practiceCount - currentLevel.threshold;
+    const totalPracticesForNext = nextLevel.threshold - currentLevel.threshold;
+    const progressPercent = Math.min(100, Math.round((practicesInCurrentLevel / totalPracticesForNext) * 100));
+    const practicesToNext = nextLevel.threshold - practiceCount;
+
+    return {
+        currentLevel,
+        nextLevel,
+        progressPercent,
+        practicesToNext,
+        narrative: currentLevel.narrative
+    };
+}
+
+export function checkMilestones(practices, currentProfile) {
+    const profile = currentProfile || {};
+    const existingMilestones = Array.isArray(profile.earnedMilestones) ? profile.earnedMilestones : [];
+    const stats = calculatePracticeStats(practices || []);
+    const earnedMilestoneIds = new Set(existingMilestones.map(m => m.id));
+    const newlyEarned = [];
+
+    MILESTONES.forEach(milestone => {
+        if (!earnedMilestoneIds.has(milestone.id) && isMilestoneEarned(milestone, stats)) {
+            newlyEarned.push({
+                id: milestone.id,
+                name: milestone.name,
+                earnedDate: new Date().toISOString().split('T')[0],
+                practiceNumber: stats.practiceCount,
+                level: milestone.level,
+                description: milestone.description
+            });
+        }
+    });
+
+    if (!newlyEarned.length) return null;
+
+    return {
+        ...profile,
+        earnedMilestones: [...existingMilestones, ...newlyEarned]
+    };
+}
+
+function isMilestoneEarned(milestone, stats) {
+    if (milestone.threshold && stats.practiceCount >= milestone.threshold) {
+        return true;
+    }
+    if (milestone.thresholdHours && stats.totalHours >= milestone.thresholdHours) {
+        return true;
+    }
+    if (milestone.thresholdStreak && stats.streaks.current >= milestone.thresholdStreak) {
+        return true;
+    }
+    if (milestone.thresholdWindow) {
+        const windowKey = `last${milestone.thresholdWindow.days}Days`;
+        return stats[windowKey] >= milestone.thresholdWindow.min;
+    }
+    return false;
+}
+
+// Legacy badge system - kept for migration
 export const ALL_BADGES = [
     // Volume milestones (frequent early wins → spaced out later)
     {
@@ -547,11 +745,18 @@ export function checkBadges(practices, currentProfile) {
         }
     });
 
-    if (!newlyEarned.length && !migrationOccurred) return null;
+    // Also check for new milestone system
+    const milestoneResult = checkMilestones(practices, profile);
+
+    const hasNewBadges = newlyEarned.length > 0;
+    const hasNewMilestones = milestoneResult && milestoneResult.earnedMilestones.length > profile.earnedMilestones?.length;
+
+    if (!hasNewBadges && !hasNewMilestones && !migrationOccurred) return null;
 
     return {
         ...profile,
-        earnedBadges: [...normalizedBadges, ...newlyEarned]
+        earnedBadges: [...normalizedBadges, ...newlyEarned],
+        ...(milestoneResult && { earnedMilestones: milestoneResult.earnedMilestones })
     };
 }
 

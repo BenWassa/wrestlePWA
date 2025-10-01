@@ -1,80 +1,36 @@
 // Tests for badge system and journey logic
 
-TestRunner.describe('Badge System', () => {
+TestRunner.describe('Identity Level System', () => {
 
-    TestRunner.it('should have correct badge definitions', () => {
-        TestRunner.assert.truthy(ALL_BADGES.length > 30, 'Should have comprehensive badge set (30+ badges)');
-
-        const firstBadge = ALL_BADGES[0];
-        TestRunner.assert.equal(firstBadge.id, 'first_practice', 'First badge should have correct string ID');
-        TestRunner.assert.equal(firstBadge.name, 'Day One', 'First badge should have correct name');
-        TestRunner.assert.hasProperty(firstBadge, 'check', 'Badge should have check function');
-        TestRunner.assert.hasProperty(firstBadge, 'description', 'Badge should have description');
-        TestRunner.assert.hasProperty(firstBadge, 'icon', 'Badge should have icon');
+    TestRunner.it('should have correct identity levels', () => {
+        TestRunner.assert.truthy(IDENTITY_LEVELS.length >= 5, 'Should have at least 5 identity levels');
+        TestRunner.assert.equal(IDENTITY_LEVELS[0].id, 'amateur', 'First level should be amateur');
+        TestRunner.assert.equal(IDENTITY_LEVELS[IDENTITY_LEVELS.length - 1].id, 'veteran', 'Last level should be veteran');
     });
 
-    TestRunner.it('should check first practice badge', () => {
-        const practices = [];
-        const stats = { practiceCount: 0, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 0, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
-        TestRunner.assert.equal(ALL_BADGES[0].check(stats), false, 'Should not earn first practice badge with no practices');
+    TestRunner.it('should get current identity level', () => {
+        const amateurLevel = getCurrentIdentityLevel(10);
+        TestRunner.assert.equal(amateurLevel.id, 'amateur', '10 practices should be amateur level');
 
-        stats.practiceCount = 1;
-        TestRunner.assert.equal(ALL_BADGES[0].check(stats), true, 'Should earn first practice badge with 1 practice');
+        const grinderLevel = getCurrentIdentityLevel(75);
+        TestRunner.assert.equal(grinderLevel.id, 'grinder', '75 practices should be grinder level');
+
+        const veteranLevel = getCurrentIdentityLevel(2000);
+        TestRunner.assert.equal(veteranLevel.id, 'veteran', '2000 practices should be veteran level');
     });
 
-    TestRunner.it('should check practice count badges', () => {
-        const stats = { practiceCount: 0, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 0, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
-        
-        // Find 10 practices badge (index 3 in comprehensive set)
-        const tenPracticesBadge = ALL_BADGES.find(b => b.id === 'ten_practices');
-        TestRunner.assert.truthy(tenPracticesBadge, 'Should find ten_practices badge');
-        TestRunner.assert.equal(tenPracticesBadge.check(stats), false, 'Should not earn 10 practices badge with 0 practices');
-
-        stats.practiceCount = 9;
-        TestRunner.assert.equal(tenPracticesBadge.check(stats), false, 'Should not earn 10 practices badge with 9 practices');
-
-        stats.practiceCount = 10;
-        TestRunner.assert.equal(tenPracticesBadge.check(stats), true, 'Should earn 10 practices badge with 10 practices');
-
-        // Find 50 practices badge
-        const fiftyPracticesBadge = ALL_BADGES.find(b => b.id === 'fifty_practices');
-        stats.practiceCount = 50;
-        TestRunner.assert.equal(fiftyPracticesBadge.check(stats), true, 'Should earn 50 practices badge with 50 practices');
+    TestRunner.it('should calculate identity progress', () => {
+        const progress = getIdentityProgress(25);
+        TestRunner.assert.equal(progress.currentLevel.id, 'amateur', '25 practices should be in amateur level');
+        TestRunner.assert.equal(progress.nextLevel.id, 'grinder', 'Next level should be grinder');
+        TestRunner.assert.equal(progress.practicesToNext, 25, 'Should need 25 more practices for grinder');
     });
 
-    TestRunner.it('should check intensity badge', () => {
-        const stats = { practiceCount: 5, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 3, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
-
-        const intensityBadge = ALL_BADGES.find(b => b.id === 'high_intensity_focus');
-        TestRunner.assert.truthy(intensityBadge, 'Should find high_intensity_focus badge');
-        TestRunner.assert.equal(intensityBadge.check(stats), false, 'Should not earn 4+ rating badge with avg 3');
-
-        stats.avgRecentIntensity = 8;
-        TestRunner.assert.equal(intensityBadge.check(stats), true, 'Should earn 4+ rating badge with avg 8');
-    });
-
-    TestRunner.it('should check badge earning logic', () => {
-        const currentProfile = { earnedBadges: [] };
-        const practices = [{ id: 1, notes: 'First practice', duration: 60, intensity: 5 }];
-
-        const updatedProfile = checkBadges(practices, currentProfile);
-
-        TestRunner.assert.truthy(updatedProfile, 'Should return updated profile');
-        TestRunner.assert.equal(updatedProfile.earnedBadges.length, 1, 'Should have earned 1 badge');
-        TestRunner.assert.equal(updatedProfile.earnedBadges[0].id, 'first_practice', 'Should have earned first practice badge');
-        TestRunner.assert.hasProperty(updatedProfile.earnedBadges[0], 'earnedDate', 'Badge should have earned date');
-        TestRunner.assert.equal(updatedProfile.earnedBadges[0].practiceNumber, 1, 'Badge should have practice number');
-    });
-
-    TestRunner.it('should not earn already earned badges', () => {
-        const currentProfile = {
-            earnedBadges: [{ id: 'first_practice', earnedDate: '2025-01-01', practiceNumber: 1 }]
-        };
-        const practices = [{ id: 1, notes: 'First practice', duration: 60 }, { id: 2, notes: 'Second practice', duration: 60 }];
-
-        const updatedProfile = checkBadges(practices, currentProfile);
-
-        TestRunner.assert.falsy(updatedProfile, 'Should not return updated profile for already earned badge');
+    TestRunner.it('should handle max level', () => {
+        const progress = getIdentityProgress(3000);
+        TestRunner.assert.equal(progress.currentLevel.id, 'veteran', '3000 practices should be veteran level');
+        TestRunner.assert.falsy(progress.nextLevel, 'Should have no next level at max');
+        TestRunner.assert.equal(progress.progressPercent, 100, 'Should show 100% progress');
     });
 
 });

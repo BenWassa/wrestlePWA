@@ -107,7 +107,14 @@
         "items": "earnedBadge",
         "required": true,
         "default": [],
-        "description": "Array of all badges user has earned"
+        "description": "Legacy badge system - array of earned badges"
+      },
+      "earnedMilestones": {
+        "type": "array",
+        "items": "earnedMilestone",
+        "required": true,
+        "default": [],
+        "description": "New identity milestone system - array of earned milestones"
       }
     }
   },
@@ -142,6 +149,52 @@
         "enum": ["volume", "consistency", "hours", "phase", "effort"],
         "required": true,
         "description": "Badge category for filtering/display"
+      }
+    }
+  },
+
+  "earnedMilestone": {
+    "_description": "Individual earned milestone record within profile (new identity system)",
+    "_example": {
+      "id": "first_practice",
+      "name": "Day One",
+      "earnedDate": "2025-02-01",
+      "practiceNumber": 1,
+      "level": "amateur",
+      "description": "Your first practice logged."
+    },
+    "_fields": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "description": "Milestone identifier matching MILESTONES array"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Display name of the milestone"
+      },
+      "earnedDate": {
+        "type": "string",
+        "format": "YYYY-MM-DD",
+        "required": true,
+        "description": "Date milestone was earned"
+      },
+      "practiceNumber": {
+        "type": "number",
+        "required": true,
+        "description": "Practice count when milestone was earned"
+      },
+      "level": {
+        "type": "string",
+        "enum": ["amateur", "grinder", "technician", "competitor", "veteran"],
+        "required": true,
+        "description": "Identity level this milestone belongs to"
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "Description of what the milestone represents"
       }
     }
   },
@@ -194,6 +247,110 @@
         "signature": "(stats: PracticeStats) => boolean",
         "required": true,
         "description": "Function that returns true if badge requirements are met"
+      }
+    }
+  },
+
+  "identityLevel": {
+    "_description": "Identity level definition object in IDENTITY_LEVELS array (new belt-rank system)",
+    "_example": {
+      "id": "grinder",
+      "name": "Grinder",
+      "description": "You\\'ve proven you can show up. Now it\\'s about grinding through the tough days.",
+      "color": "#f59e0b",
+      "threshold": 50,
+      "narrative": "You\\'re in the Grinder phase: turning consistency into unbreakable habits."
+    },
+    "_fields": {
+      "id": {
+        "type": "string",
+        "enum": ["amateur", "grinder", "technician", "competitor", "veteran"],
+        "required": true,
+        "description": "Unique level identifier"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Display name of the identity level"
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "Description of what this level represents"
+      },
+      "color": {
+        "type": "string",
+        "format": "hex color",
+        "required": true,
+        "description": "Hex color code for UI theming"
+      },
+      "threshold": {
+        "type": "number",
+        "required": true,
+        "description": "Practice count required to reach this level"
+      },
+      "narrative": {
+        "type": "string",
+        "required": true,
+        "description": "Motivational narrative shown to users at this level"
+      }
+    }
+  },
+
+  "milestone": {
+    "_description": "Milestone definition object in MILESTONES array (new achievement system)",
+    "_example": {
+      "id": "century_club",
+      "name": "Century Club",
+      "threshold": 100,
+      "level": "grinder",
+      "description": "One hundred practices logged."
+    },
+    "_fields": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "description": "Unique milestone identifier"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Display name of the milestone"
+      },
+      "threshold": {
+        "type": "number",
+        "required": false,
+        "description": "Practice count threshold (for volume milestones)"
+      },
+      "thresholdHours": {
+        "type": "number",
+        "required": false,
+        "description": "Hours threshold (for time-based milestones)"
+      },
+      "thresholdStreak": {
+        "type": "number",
+        "required": false,
+        "description": "Streak threshold (for consistency milestones)"
+      },
+      "thresholdWindow": {
+        "type": "object",
+        "required": false,
+        "properties": {
+          "days": { "type": "number", "description": "Time window in days" },
+          "min": { "type": "number", "description": "Minimum practices required in window" }
+        },
+        "description": "Window-based threshold (e.g., 6 practices in 14 days)"
+      },
+      "level": {
+        "type": "string",
+        "enum": ["amateur", "grinder", "technician", "competitor", "veteran"],
+        "required": true,
+        "description": "Identity level this milestone belongs to"
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "Description of the milestone achievement"
       }
     }
   },

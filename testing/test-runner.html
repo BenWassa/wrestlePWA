@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initi        import { openDB, addPractice, getPractices, deletePractice, getProfile, setProfile, clearAllData, ALL_BADGES, checkBadges, PHASES, getPhase, IDENTITY_LEVELS, getCurrentIdentityLevel, getIdentityProgress, MILESTONES } from '../docs/db.js';
+        
+        // Make functions available globally for tests
+        window.openDB = openDB;cale=1.0">
     <meta name="theme-color" content="#ea580c">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Wrestling PWA - Test Suite</title>
@@ -143,6 +146,10 @@
         window.checkBadges = checkBadges;
         window.PHASES = PHASES;
         window.getPhase = getPhase;
+        window.IDENTITY_LEVELS = IDENTITY_LEVELS;
+        window.getCurrentIdentityLevel = getCurrentIdentityLevel;
+        window.getIdentityProgress = getIdentityProgress;
+        window.MILESTONES = MILESTONES;
     </script>
 
     <!-- Load test files -->
