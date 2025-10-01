@@ -38,7 +38,7 @@ TestRunner.describe('PWA Functionality', () => {
 
     TestRunner.it('should load manifest.json', async () => {
         try {
-            const response = await fetch('manifest.json');
+            const response = await fetch('../docs/manifest.json');
             TestRunner.assert.equal(response.status, 200, 'Manifest should load successfully');
 
             const manifest = await response.json();
@@ -54,7 +54,7 @@ TestRunner.describe('PWA Functionality', () => {
 
     TestRunner.it('should load service worker', async () => {
         try {
-            const response = await fetch('service-worker.js');
+            const response = await fetch('../docs/service-worker.js');
             TestRunner.assert.equal(response.status, 200, 'Service worker should load successfully');
 
             const content = await response.text();
@@ -67,7 +67,7 @@ TestRunner.describe('PWA Functionality', () => {
 
     TestRunner.it('should load CSS file', async () => {
         try {
-            const response = await fetch('style.css');
+            const response = await fetch('../docs/style.css');
             TestRunner.assert.equal(response.status, 200, 'CSS should load successfully');
 
             const content = await response.text();
@@ -80,7 +80,7 @@ TestRunner.describe('PWA Functionality', () => {
 
     TestRunner.it('should load db.js module', async () => {
         try {
-            const response = await fetch('db.js');
+            const response = await fetch('../docs/db.js');
             TestRunner.assert.equal(response.status, 200, 'db.js should load successfully');
 
             const content = await response.text();

@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ea580c">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Wrestling PWA - Test Suite</title>
+    
+    <!-- PWA Links -->
+    <link rel="manifest" href="../docs/manifest.json">
+    <link rel="icon" href="../docs/icon.svg">
+    <link rel="apple-touch-icon" href="../docs/icon.svg">
     <style>
         body {
             font-family: monospace;
@@ -97,7 +104,7 @@
                 <option value="conditioning">Conditioning/Strength</option>
                 <option value="competition">Competition</option>
             </select>
-            <input id="practice-date" type="date" value="2025-10-01">
+            <input id="practice-date" type="date">
             <input id="practice-duration" type="number" min="1">
             <input id="practice-intensity" type="range" min="1" max="10" value="5">
             <span id="intensity-value">5</span>
@@ -121,7 +128,22 @@
     <script src="test-framework.js"></script>
 
     <!-- Load db.js for database tests -->
-    <script type="module" src="../docs/db.js"></script>
+    <script type="module">
+        import { openDB, addPractice, getPractices, deletePractice, getProfile, setProfile, clearAllData, ALL_BADGES, checkBadges, PHASES, getPhase } from '../docs/db.js';
+        
+        // Make functions available globally for tests
+        window.openDB = openDB;
+        window.addPractice = addPractice;
+        window.getPractices = getPractices;
+        window.deletePractice = deletePractice;
+        window.getProfile = getProfile;
+        window.setProfile = setProfile;
+        window.clearAllData = clearAllData;
+        window.ALL_BADGES = ALL_BADGES;
+        window.checkBadges = checkBadges;
+        window.PHASES = PHASES;
+        window.getPhase = getPhase;
+    </script>
 
     <!-- Load test files -->
     <script src="tests/db-tests.js"></script>
@@ -130,6 +152,55 @@
     <script src="tests/badge-tests.js"></script>
 
     <script>
+        // Form functionality for tests
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('practice-form');
+            const durationInput = document.getElementById('practice-duration');
+            const intensityInput = document.getElementById('practice-intensity');
+            const physicalInput = document.getElementById('practice-physical');
+            const mentalInput = document.getElementById('practice-mental');
+            const dateInput = document.getElementById('practice-date');
+            
+            // Set today's date as default
+            if (dateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+            
+            // Handle preset duration buttons
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            presetButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (durationInput) {
+                        durationInput.value = this.dataset.duration;
+                    }
+                });
+            });
+            
+            // Handle slider value updates
+            function updateSliderDisplay(slider, displayId) {
+                const display = document.getElementById(displayId);
+                if (slider && display) {
+                    slider.addEventListener('input', function() {
+                        display.textContent = this.value;
+                    });
+                }
+            }
+            
+            updateSliderDisplay(intensityInput, 'intensity-value');
+            updateSliderDisplay(physicalInput, 'physical-value');
+            updateSliderDisplay(mentalInput, 'mental-value');
+            
+            // Add form submission handler
+            if (form) {
+                form.onsubmit = function(e) {
+                    e.preventDefault();
+                    // Form submission logic would go here
+                    return false;
+                };
+            }
+        });
+
         async function runAllTests() {
             const resultsDiv = document.getElementById('testResults');
             const progressBar = document.getElementById('progressBar');
