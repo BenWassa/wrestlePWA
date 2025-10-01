@@ -1,0 +1,321 @@
+{
+  "_meta": {
+    "description": "Data schema template for wrestlePWA",
+    "version": "1.0.0",
+    "lastUpdated": "2025-10-01"
+  },
+  
+  "practice": {
+    "_description": "Single practice session object stored in IndexedDB",
+    "_example": {
+      "id": 1,
+      "date": "2025-10-01",
+      "duration": 90,
+      "type": "drills",
+      "intensity": 7,
+      "physical": 8,
+      "mental": 6,
+      "notes": "Worked on single-leg takedowns and sprawls. Felt strong."
+    },
+    "_fields": {
+      "id": {
+        "type": "number",
+        "required": true,
+        "description": "Auto-incrementing unique identifier from IndexedDB"
+      },
+      "date": {
+        "type": "string",
+        "format": "YYYY-MM-DD",
+        "required": true,
+        "description": "Date of practice session"
+      },
+      "duration": {
+        "type": "number",
+        "required": true,
+        "description": "Practice duration in minutes"
+      },
+      "type": {
+        "type": "string",
+        "enum": ["drills", "live", "conditioning", "recovery"],
+        "required": true,
+        "description": "Type of practice session"
+      },
+      "intensity": {
+        "type": "number",
+        "min": 1,
+        "max": 10,
+        "required": true,
+        "description": "Subjective intensity rating (1-10)"
+      },
+      "physical": {
+        "type": "number",
+        "min": 1,
+        "max": 10,
+        "required": false,
+        "description": "Physical difficulty rating (1-10)"
+      },
+      "mental": {
+        "type": "number",
+        "min": 1,
+        "max": 10,
+        "required": false,
+        "description": "Mental difficulty rating (1-10)"
+      },
+      "notes": {
+        "type": "string",
+        "required": false,
+        "maxLength": 500,
+        "description": "Free-form notes about the session"
+      }
+    }
+  },
+
+  "profile": {
+    "_description": "User profile object stored in IndexedDB",
+    "_example": {
+      "name": "Wrestler",
+      "startDate": "2025-01-15",
+      "earnedBadges": [
+        {
+          "id": "first_practice",
+          "earnedDate": "2025-01-15",
+          "practiceNumber": 1,
+          "category": "volume"
+        },
+        {
+          "id": "five_practices",
+          "earnedDate": "2025-01-22",
+          "practiceNumber": 5,
+          "category": "volume"
+        }
+      ]
+    },
+    "_fields": {
+      "name": {
+        "type": "string",
+        "required": false,
+        "description": "User's display name"
+      },
+      "startDate": {
+        "type": "string",
+        "format": "YYYY-MM-DD",
+        "required": false,
+        "description": "Date user started tracking practices"
+      },
+      "earnedBadges": {
+        "type": "array",
+        "items": "earnedBadge",
+        "required": true,
+        "default": [],
+        "description": "Array of all badges user has earned"
+      }
+    }
+  },
+
+  "earnedBadge": {
+    "_description": "Individual earned badge record within profile",
+    "_example": {
+      "id": "ten_practices",
+      "earnedDate": "2025-02-01",
+      "practiceNumber": 10,
+      "category": "volume"
+    },
+    "_fields": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "description": "Badge identifier matching ALL_BADGES array (string format)"
+      },
+      "earnedDate": {
+        "type": "string",
+        "format": "YYYY-MM-DD",
+        "required": true,
+        "description": "Date badge was earned"
+      },
+      "practiceNumber": {
+        "type": "number",
+        "required": true,
+        "description": "Practice count when badge was earned"
+      },
+      "category": {
+        "type": "string",
+        "enum": ["volume", "consistency", "hours", "phase", "effort"],
+        "required": true,
+        "description": "Badge category for filtering/display"
+      }
+    }
+  },
+
+  "badge": {
+    "_description": "Badge definition object in ALL_BADGES array (db.js)",
+    "_example": {
+      "id": "first_practice",
+      "name": "Day One",
+      "description": "Log your very first practice.",
+      "icon": "🏅",
+      "category": "volume",
+      "milestone": 1,
+      "check": "(stats) => stats.practiceCount >= 1"
+    },
+    "_fields": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "description": "Unique badge identifier (string format, e.g. 'first_practice')"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Display name for the badge"
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "Badge description shown to user"
+      },
+      "icon": {
+        "type": "string",
+        "required": true,
+        "description": "Emoji icon representing the badge"
+      },
+      "category": {
+        "type": "string",
+        "enum": ["volume", "consistency", "hours", "phase", "effort"],
+        "required": true,
+        "description": "Badge category for organization"
+      },
+      "milestone": {
+        "type": "number",
+        "required": false,
+        "description": "Practice count milestone (for volume/phase badges only)"
+      },
+      "check": {
+        "type": "function",
+        "signature": "(stats: PracticeStats) => boolean",
+        "required": true,
+        "description": "Function that returns true if badge requirements are met"
+      }
+    }
+  },
+
+  "practiceStats": {
+    "_description": "Calculated statistics object from calculatePracticeStats()",
+    "_example": {
+      "practiceCount": 25,
+      "totalMinutes": 2100,
+      "totalHours": 35,
+      "avgRecentIntensity": 7.2,
+      "streaks": {
+        "current": 5,
+        "longest": 10
+      },
+      "last7Days": 4,
+      "last14Days": 8,
+      "last30Days": 15
+    },
+    "_fields": {
+      "practiceCount": {
+        "type": "number",
+        "description": "Total number of logged practices"
+      },
+      "totalMinutes": {
+        "type": "number",
+        "description": "Sum of all practice durations in minutes"
+      },
+      "totalHours": {
+        "type": "number",
+        "description": "Sum of all practice durations in hours (totalMinutes / 60)"
+      },
+      "avgRecentIntensity": {
+        "type": "number",
+        "description": "Average intensity of last 5 practices"
+      },
+      "streaks": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "number",
+            "description": "Current consecutive day streak (0 if broken)"
+          },
+          "longest": {
+            "type": "number",
+            "description": "Longest consecutive day streak ever achieved"
+          }
+        }
+      },
+      "last7Days": {
+        "type": "number",
+        "description": "Number of practices in last 7 days"
+      },
+      "last14Days": {
+        "type": "number",
+        "description": "Number of practices in last 14 days"
+      },
+      "last30Days": {
+        "type": "number",
+        "description": "Number of practices in last 30 days"
+      }
+    }
+  },
+
+  "phase": {
+    "_description": "Journey phase definition object in PHASES array",
+    "_example": {
+      "id": 1,
+      "name": "The Baseline",
+      "description": "Starting out",
+      "start": 0,
+      "goal": 10
+    },
+    "_fields": {
+      "id": {
+        "type": "number",
+        "required": true,
+        "description": "Numeric phase identifier"
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "description": "Phase display name"
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "description": "Short phase description"
+      },
+      "start": {
+        "type": "number",
+        "required": true,
+        "description": "Practice count where phase begins (inclusive)"
+      },
+      "goal": {
+        "type": "number",
+        "required": true,
+        "description": "Practice count to complete phase (exclusive)"
+      }
+    }
+  },
+
+  "_validationRules": {
+    "practiceTypes": ["drills", "live", "conditioning", "recovery"],
+    "badgeCategories": ["volume", "consistency", "hours", "phase", "effort"],
+    "dateFormat": "YYYY-MM-DD (ISO 8601)",
+    "badgeIdFormat": "lowercase_snake_case (string)",
+    "ratingRange": "1-10 inclusive",
+    "notesMaxLength": 500
+  },
+
+  "_migrations": {
+    "badgeIds": {
+      "description": "Badge IDs migrated from numeric (1,2,3,4) to string format ('first_practice', etc.) in v4",
+      "oldFormat": "number (1, 2, 3, 4)",
+      "newFormat": "string ('first_practice', 'ten_practices', 'fifty_practices', 'high_intensity_focus')",
+      "migrationMap": {
+        "1": "first_practice",
+        "2": "ten_practices",
+        "3": "fifty_practices",
+        "4": "high_intensity_focus"
+      }
+    }
+  }
+}
