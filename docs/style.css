@@ -480,31 +480,11 @@ input[type="range"]::-moz-range-thumb {
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.badge-icon {
-  font-size: 1.75rem;
-}
 
-.badge-copy {
+.badge-feed {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-
-.badge-name {
-  margin: 0;
-  font-weight: 600;
-}
-
-.badge-meta {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.badge-grid {
-  display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .badge-card {
@@ -513,8 +493,9 @@ input[type="range"]::-moz-range-thumb {
   padding: 1.1rem;
   border: 1px solid rgba(148, 163, 184, 0.12);
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .badge-card.earned {
@@ -522,6 +503,22 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(234, 88, 12, 0.18);
 }
 
+.badge-icon {
+  font-size: 2rem;
+}
+
+.badge-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.badge-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.badge-meta,
 .badge-description,
 .badge-earned {
   margin: 0;

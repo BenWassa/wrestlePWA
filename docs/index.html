@@ -48,14 +48,6 @@
       let profile = {};
       let currentTab = 'dashboard';
 
-      // --- JOURNEY DATA & LOGIC ---
-      const BADGE_ICONS = {
-        1: '🏆',
-        2: '🎖️',
-        3: '🥇',
-        4: '⭐'
-      };
-      
       // --- RENDER FUNCTION ---
       async function render() {
         practices = await getPractices();
@@ -77,12 +69,32 @@
           lastPracticeDate: practices.length ? new Date(practices.slice(-1)[0].date).toLocaleDateString() : 'N/A'
         };
 
-        const earnedBadges = (profile.earnedBadges || []).sort((a, b) => new Date(a.earnedDate) - new Date(b.earnedDate));
+        const practiceCount = practices.length;
+        const earnedBadges = (profile.earnedBadges || []).map(badge => ({ ...badge, id: String(badge.id) }))
+          .sort((a, b) => new Date(a.earnedDate) - new Date(b.earnedDate));
         const latestBadges = earnedBadges.slice(-3).reverse();
-        const nextGoal = nextPhase ? nextPhase.goal : currentPhase.goal;
-        const progressPercent = Math.min(100, Math.max(0, Math.round((practices.length / nextGoal) * 100)));
-        const sessionsRemaining = Math.max(0, nextGoal - practices.length);
+
+        const milestoneBadges = ALL_BADGES
+          .filter(badge => typeof badge.milestone === 'number')
+          .sort((a, b) => a.milestone - b.milestone);
+
+        const nextMilestone = milestoneBadges.find(badge => badge.milestone > practiceCount) || null;
+        const previousMilestone = [...milestoneBadges]
+          .reverse()
+          .find(badge => badge.milestone <= practiceCount) || null;
+
+        const startMilestoneValue = previousMilestone ? previousMilestone.milestone : 0;
+        const targetMilestoneValue = nextMilestone ? nextMilestone.milestone : (previousMilestone ? previousMilestone.milestone : practiceCount || 1);
+        const milestoneDenominator = Math.max(1, targetMilestoneValue - startMilestoneValue);
+        const progressPercent = nextMilestone
+          ? Math.min(100, Math.max(0, Math.round(((practiceCount - startMilestoneValue) / milestoneDenominator) * 100)))
+          : 100;
+        const sessionsRemaining = nextMilestone ? Math.max(0, targetMilestoneValue - practiceCount) : 0;
         const sessionsLabel = sessionsRemaining === 1 ? 'session' : 'sessions';
+        const milestoneUnit = nextMilestone && nextMilestone.milestone === 1 ? 'practice' : 'practices';
+        const nextMilestoneLabel = nextMilestone
+          ? `${nextMilestone.milestone} ${milestoneUnit} · ${nextMilestone.name}`
+          : 'Veteran status — keep sharpening your edge.';
         const totalHours = (stats.totalTime / 60).toFixed(1);
         const lastPractice = practices.length ? practices[practices.length - 1] : null;
 
@@ -117,14 +129,14 @@
                     </div>
                     <span class="phase-chip">${stats.totalPractices} logged</span>
                   </div>
-                  <p class="panel-subtitle">Next milestone: ${nextPhase ? `${nextPhase.goal} practices · ${nextPhase.name}` : 'Mastery — keep sharpening your edge.'}</p>
+                  <p class="panel-subtitle">Next milestone: ${nextMilestoneLabel}</p>
                   <div class="progress-summary">
                     <div class="progress-ring" style="--progress:${progressPercent}%">
                       <span>${progressPercent}%</span>
                     </div>
                     <div class="progress-details">
-                      <p class="progress-count">${practices.length} / ${nextGoal} practices logged</p>
-                      <p class="progress-note">${sessionsRemaining > 0 ? `${sessionsRemaining} more ${sessionsLabel} until ${nextPhase ? nextPhase.name : currentPhase.name}.` : 'You hit this milestone. Stay humble and keep the reps coming.'}</p>
+                      <p class="progress-count">${practiceCount}${nextMilestone ? ` / ${nextMilestone.milestone}` : ''} practices logged</p>
+                      <p class="progress-note">${nextMilestone ? (sessionsRemaining > 0 ? `${sessionsRemaining} more ${sessionsLabel} until ${nextMilestone.name}.` : 'You hit this milestone. Stay humble and keep the reps coming.') : 'You carved out your own pace. Keep the story going.'}</p>
                       <p class="progress-last">${lastPractice ? `Last logged: ${new Date(lastPractice.date).toLocaleDateString()} · ${lastPractice.type}` : 'You have not logged a practice yet. Start today—no fluff, just work.'}</p>
                     </div>
                   </div>
@@ -171,7 +183,7 @@
                       const badgeInfo = ALL_BADGES.find(item => item.id === badge.id);
                       return `
                         <div class="badge-token">
-                          <span class="badge-icon">${BADGE_ICONS[badge.id] || '🥋'}</span>
+                          <span class="badge-icon">${badgeInfo ? badgeInfo.icon : '🥋'}</span>
                           <div class="badge-copy">
                             <p class="badge-name">${badgeInfo ? badgeInfo.name : 'Badge'}</p>
                             <p class="badge-meta">Practice #${badge.practiceNumber} · ${new Date(badge.earnedDate).toLocaleDateString()}</p>
@@ -306,20 +318,21 @@
                       <h2>Earned badges</h2>
                       <p class="panel-subtitle">Consistency over hype. Each badge marks a real milestone.</p>
                     </div>
-                    <span class="phase-chip subtle">${earnedBadges.length} / ${ALL_BADGES.length}</span>
                   </div>
-                  <div class="badge-grid">
-                    ${ALL_BADGES.map(badge => {
-                      const earned = earnedBadges.find(b => b.id === badge.id);
+                  <div class="badge-feed">
+                    ${earnedBadges.length ? earnedBadges.map(badge => {
+                      const badgeInfo = ALL_BADGES.find(item => item.id === badge.id);
                       return `
-                        <div class="badge-card ${earned ? 'earned' : ''}">
-                          <span class="badge-icon">${BADGE_ICONS[badge.id] || '🥋'}</span>
-                          <h3>${badge.name}</h3>
-                          <p class="badge-description">${badge.description}</p>
-                          ${earned ? `<p class="badge-earned">Unlocked ${new Date(earned.earnedDate).toLocaleDateString()} · Practice #${earned.practiceNumber}</p>` : '<p class="badge-earned">Keep grinding to unlock.</p>'}
+                        <div class="badge-card earned">
+                          <span class="badge-icon">${badgeInfo ? badgeInfo.icon : '🥋'}</span>
+                          <div class="badge-copy">
+                            <h3>${badgeInfo ? badgeInfo.name : 'Badge'}</h3>
+                            ${badgeInfo ? `<p class="badge-description">${badgeInfo.description}</p>` : ''}
+                            <p class="badge-earned">Earned ${new Date(badge.earnedDate).toLocaleDateString()} · Practice #${badge.practiceNumber}</p>
+                          </div>
                         </div>
                       `;
-                    }).join('')}
+                    }).join('') : '<p class="empty">Earned badges show up here. Keep logging.</p>'}
                   </div>
                 </article>
               </section>
