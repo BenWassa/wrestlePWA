@@ -220,32 +220,316 @@ function calculatePracticeStats(practices) {
     };
 }
 
-// Minimal badge set used by tests (keeps external API stable but uses numeric ids)
+// Comprehensive badge set matching Badge_system.md and TRUTH_DOC.md
 export const ALL_BADGES = [
-    { id: 1, name: 'First Practice', description: 'Log your very first practice.', icon: '🏅', milestone: 1, category: 'volume', check: (practicesOrStats) => {
-        const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
-        return stats.practiceCount >= 1;
-    }},
-    { id: 2, name: '10 Practices', description: 'Ten honest sessions logged.', icon: '💪', milestone: 10, category: 'volume', check: (practicesOrStats) => {
-        const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
-        return stats.practiceCount >= 10;
-    }},
-    { id: 3, name: '50 Practices', description: 'Fifty practices: the habit is real.', icon: '🥇', milestone: 50, category: 'volume', check: (practicesOrStats) => {
-        const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
-        return stats.practiceCount >= 50;
-    }},
-    { id: 4, name: 'High Intensity Focus', description: 'Average intensity 4+ over the last 5 sessions (min 5 sessions).', icon: '⚡', category: 'effort', check: (practicesOrStats) => {
-        const stats = typeof practicesOrStats === 'number' ? { practiceCount: practicesOrStats, avgRecentIntensity: 0 } : calculatePracticeStats(Array.isArray(practicesOrStats) ? practicesOrStats : []);
-        return stats.avgRecentIntensity >= 4 && stats.practiceCount >= 5;
-    }}
+    // Volume milestones (frequent early wins → spaced out later)
+    {
+        id: 'first_practice',
+        name: 'Day One',
+        description: 'Log your very first practice.',
+        icon: '🏅',
+        category: 'volume',
+        milestone: 1,
+        check: (stats) => stats.practiceCount >= 1
+    },
+    {
+        id: 'three_practices',
+        name: 'Three Days In',
+        description: 'Keep the spark alive with three logged practices.',
+        icon: '✨',
+        category: 'volume',
+        milestone: 3,
+        check: (stats) => stats.practiceCount >= 3
+    },
+    {
+        id: 'five_practices',
+        name: 'First Week',
+        description: 'Five practices logged. You survived week one.',
+        icon: '🔥',
+        category: 'volume',
+        milestone: 5,
+        check: (stats) => stats.practiceCount >= 5
+    },
+    {
+        id: 'ten_practices',
+        name: 'Two Weeks Strong',
+        description: 'Ten sessions entered. Momentum is building.',
+        icon: '💪',
+        category: 'volume',
+        milestone: 10,
+        check: (stats) => stats.practiceCount >= 10
+    },
+    {
+        id: 'fifteen_practices',
+        name: 'Three Weeks In',
+        description: 'Fifteen logged practices. Showing up matters.',
+        icon: '🏋️',
+        category: 'volume',
+        milestone: 15,
+        check: (stats) => stats.practiceCount >= 15
+    },
+    {
+        id: 'twenty_practices',
+        name: 'First Month',
+        description: 'Twenty honest sessions. A full month of work.',
+        icon: '📆',
+        category: 'volume',
+        milestone: 20,
+        check: (stats) => stats.practiceCount >= 20
+    },
+    {
+        id: 'thirty_practices',
+        name: 'Six Weeks Strong',
+        description: 'Thirty practices logged. The habit is real.',
+        icon: '🛡️',
+        category: 'volume',
+        milestone: 30,
+        check: (stats) => stats.practiceCount >= 30
+    },
+    {
+        id: 'forty_practices',
+        name: 'Two Months Deep',
+        description: 'Forty practices. You kept the promise to yourself.',
+        icon: '⚙️',
+        category: 'volume',
+        milestone: 40,
+        check: (stats) => stats.practiceCount >= 40
+    },
+    {
+        id: 'fifty_practices',
+        name: 'Quarter Season',
+        description: 'Fifty sessions of grind logged.',
+        icon: '🥇',
+        category: 'volume',
+        milestone: 50,
+        check: (stats) => stats.practiceCount >= 50
+    },
+    {
+        id: 'seventyfive_practices',
+        name: 'Crucible Complete',
+        description: 'Seventy-five practices. Phase one survived.',
+        icon: '🔥',
+        category: 'phase',
+        milestone: 75,
+        check: (stats) => stats.practiceCount >= 75
+    },
+    {
+        id: 'hundred_practices',
+        name: 'Century Club',
+        description: 'One hundred logged practices. The grind is real.',
+        icon: '💯',
+        category: 'volume',
+        milestone: 100,
+        check: (stats) => stats.practiceCount >= 100
+    },
+    {
+        id: 'hundredfifty_practices',
+        name: 'Half Year',
+        description: 'One hundred and fifty practices documented.',
+        icon: '🛠️',
+        category: 'volume',
+        milestone: 150,
+        check: (stats) => stats.practiceCount >= 150
+    },
+    {
+        id: 'twohundred_practices',
+        name: 'Grinder Complete',
+        description: 'Two hundred practices. The foundation is set.',
+        icon: '🏆',
+        category: 'phase',
+        milestone: 200,
+        check: (stats) => stats.practiceCount >= 200
+    },
+    {
+        id: 'threehundred_practices',
+        name: 'Year and a Half',
+        description: 'Three hundred practices. Flow is taking shape.',
+        icon: '🌊',
+        category: 'volume',
+        milestone: 300,
+        check: (stats) => stats.practiceCount >= 300
+    },
+    {
+        id: 'fourhundred_practices',
+        name: 'Two Years In',
+        description: 'Four hundred entries. You live on the mat.',
+        icon: '🧱',
+        category: 'volume',
+        milestone: 400,
+        check: (stats) => stats.practiceCount >= 400
+    },
+    {
+        id: 'fivehundred_practices',
+        name: 'Technician Complete',
+        description: 'Five hundred tracked practices. Flow unlocked.',
+        icon: '⚡',
+        category: 'phase',
+        milestone: 500,
+        check: (stats) => stats.practiceCount >= 500
+    },
+    {
+        id: 'sevenfifty_practices',
+        name: 'Relentless',
+        description: 'Seven hundred and fifty sessions. Momentum never left.',
+        icon: '🌀',
+        category: 'volume',
+        milestone: 750,
+        check: (stats) => stats.practiceCount >= 750
+    },
+    {
+        id: 'thousand_practices',
+        name: 'Competitor Complete',
+        description: 'One thousand logged practices. Advanced level engaged.',
+        icon: '🥋',
+        category: 'phase',
+        milestone: 1000,
+        check: (stats) => stats.practiceCount >= 1000
+    },
+    {
+        id: 'fifteenhundred_practices',
+        name: 'Grind Veteran',
+        description: 'Fifteen hundred practices. You outlasted seasons.',
+        icon: '🛡️',
+        category: 'volume',
+        milestone: 1500,
+        check: (stats) => stats.practiceCount >= 1500
+    },
+    {
+        id: 'two_thousand_practices',
+        name: 'Advanced Complete',
+        description: 'Two thousand recorded sessions. Elite territory.',
+        icon: '🏔️',
+        category: 'phase',
+        milestone: 2000,
+        check: (stats) => stats.practiceCount >= 2000
+    },
+    {
+        id: 'veteran_status',
+        name: 'Veteran Status',
+        description: 'Keep logging beyond two thousand practices.',
+        icon: '🧭',
+        category: 'phase',
+        milestone: 2500,
+        check: (stats) => stats.practiceCount >= 2500
+    },
+
+    // Consistency badges
+    {
+        id: 'streak_three',
+        name: 'Three Practice Streak',
+        description: 'Three consecutive training days logged.',
+        icon: '📈',
+        category: 'consistency',
+        check: (stats) => stats.streaks.current >= 3
+    },
+    {
+        id: 'streak_five',
+        name: 'Five Practice Streak',
+        description: 'Five straight days putting in work.',
+        icon: '🎯',
+        category: 'consistency',
+        check: (stats) => stats.streaks.current >= 5
+    },
+    {
+        id: 'streak_ten',
+        name: 'Ten Practice Streak',
+        description: 'Ten consecutive training days documented.',
+        icon: '🚀',
+        category: 'consistency',
+        check: (stats) => stats.streaks.current >= 10
+    },
+    {
+        id: 'two_weeks_consistent',
+        name: 'Two Weeks Consistent',
+        description: 'Six or more practices in the last two weeks.',
+        icon: '📆',
+        category: 'consistency',
+        check: (stats) => stats.last14Days >= 6
+    },
+    {
+        id: 'month_of_work',
+        name: 'Month of Work',
+        description: 'Twelve or more practices this month.',
+        icon: '🧮',
+        category: 'consistency',
+        check: (stats) => stats.last30Days >= 12
+    },
+    {
+        id: 'weekly_grind',
+        name: 'Weekly Grind',
+        description: 'Logged four or more sessions in the last seven days.',
+        icon: '🛞',
+        category: 'consistency',
+        check: (stats) => stats.last7Days >= 4
+    },
+
+    // Hours invested badges
+    {
+        id: 'hours_ten',
+        name: 'Ten Hours Logged',
+        description: 'More than ten hours of mat time recorded.',
+        icon: '⏱️',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 10
+    },
+    {
+        id: 'hours_twentyfive',
+        name: 'Twenty-Five Hours',
+        description: 'Twenty-five hours documented in the trenches.',
+        icon: '⌛',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 25
+    },
+    {
+        id: 'hours_fifty',
+        name: 'Fifty Hours',
+        description: 'Fifty hours of focused training tracked.',
+        icon: '🕰️',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 50
+    },
+    {
+        id: 'hours_one_hundred',
+        name: 'One Hundred Hours',
+        description: 'One hundred hours of work logged.',
+        icon: '🏛️',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 100
+    },
+    {
+        id: 'hours_two_fifty',
+        name: 'Quarter Thousand Hours',
+        description: 'Two hundred and fifty hours recorded.',
+        icon: '📡',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 250
+    },
+    {
+        id: 'hours_five_hundred',
+        name: 'Five Hundred Hours',
+        description: 'Five hundred hours of honest training time.',
+        icon: '🧱',
+        category: 'hours',
+        check: (stats) => stats.totalHours >= 500
+    },
+
+    // Effort-focused special badge
+    {
+        id: 'high_intensity_focus',
+        name: 'High Intensity Stretch',
+        description: 'Average intensity 4+ across the last five sessions.',
+        icon: '⚡',
+        category: 'consistency',
+        check: (stats) => stats.avgRecentIntensity >= 4 && stats.practiceCount >= 5
+    }
 ];
 
 export function checkBadges(practices, currentProfile) {
     const profile = currentProfile || {};
     const existingBadges = Array.isArray(profile.earnedBadges) ? profile.earnedBadges : [];
 
-    // Normalize numeric/string ids to numbers for legacy compatibility
-    const normalizedBadges = existingBadges.map(b => ({ ...b, id: Number(b.id) }));
+    // Normalize all badge ids to strings (current system uses string ids)
+    const normalizedBadges = existingBadges.map(b => ({ ...b, id: String(b.id) }));
     const migrationOccurred = normalizedBadges.some((b, i) => String(b.id) !== String(existingBadges[i] && existingBadges[i].id));
 
     const stats = calculatePracticeStats(practices || []);
@@ -253,11 +537,12 @@ export function checkBadges(practices, currentProfile) {
     const newlyEarned = [];
 
     ALL_BADGES.forEach(badge => {
-        if (!earnedBadgeIds.has(badge.id) && badge.check(practices || stats)) {
+        if (!earnedBadgeIds.has(badge.id) && badge.check(stats)) {
             newlyEarned.push({
                 id: badge.id,
                 earnedDate: new Date().toISOString().split('T')[0],
-                practiceNumber: stats.practiceCount
+                practiceNumber: stats.practiceCount,
+                category: badge.category
             });
         }
     });

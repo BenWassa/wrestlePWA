@@ -3,78 +3,74 @@
 TestRunner.describe('Badge System', () => {
 
     TestRunner.it('should have correct badge definitions', () => {
-        TestRunner.assert.equal(ALL_BADGES.length, 4, 'Should have 4 badges defined');
+        TestRunner.assert.truthy(ALL_BADGES.length > 30, 'Should have comprehensive badge set (30+ badges)');
 
         const firstBadge = ALL_BADGES[0];
-        TestRunner.assert.equal(firstBadge.id, 1, 'First badge should have ID 1');
-        TestRunner.assert.equal(firstBadge.name, 'First Practice', 'First badge should have correct name');
+        TestRunner.assert.equal(firstBadge.id, 'first_practice', 'First badge should have correct string ID');
+        TestRunner.assert.equal(firstBadge.name, 'Day One', 'First badge should have correct name');
         TestRunner.assert.hasProperty(firstBadge, 'check', 'Badge should have check function');
+        TestRunner.assert.hasProperty(firstBadge, 'description', 'Badge should have description');
+        TestRunner.assert.hasProperty(firstBadge, 'icon', 'Badge should have icon');
     });
 
     TestRunner.it('should check first practice badge', () => {
         const practices = [];
-        TestRunner.assert.equal(ALL_BADGES[0].check(practices), false, 'Should not earn first practice badge with no practices');
+        const stats = { practiceCount: 0, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 0, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
+        TestRunner.assert.equal(ALL_BADGES[0].check(stats), false, 'Should not earn first practice badge with no practices');
 
-        practices.push({ id: 1, notes: 'Test practice' });
-        TestRunner.assert.equal(ALL_BADGES[0].check(practices), true, 'Should earn first practice badge with 1 practice');
+        stats.practiceCount = 1;
+        TestRunner.assert.equal(ALL_BADGES[0].check(stats), true, 'Should earn first practice badge with 1 practice');
     });
 
     TestRunner.it('should check practice count badges', () => {
-        let practices = [];
-        TestRunner.assert.equal(ALL_BADGES[1].check(practices), false, 'Should not earn 10 practices badge with 0 practices');
+        const stats = { practiceCount: 0, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 0, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
+        
+        // Find 10 practices badge (index 3 in comprehensive set)
+        const tenPracticesBadge = ALL_BADGES.find(b => b.id === 'ten_practices');
+        TestRunner.assert.truthy(tenPracticesBadge, 'Should find ten_practices badge');
+        TestRunner.assert.equal(tenPracticesBadge.check(stats), false, 'Should not earn 10 practices badge with 0 practices');
 
-        // Add 9 practices
-        for (let i = 0; i < 9; i++) {
-            practices.push({ id: i, notes: `Practice ${i}` });
-        }
-        TestRunner.assert.equal(ALL_BADGES[1].check(practices), false, 'Should not earn 10 practices badge with 9 practices');
+        stats.practiceCount = 9;
+        TestRunner.assert.equal(tenPracticesBadge.check(stats), false, 'Should not earn 10 practices badge with 9 practices');
 
-        // Add 10th practice
-        practices.push({ id: 10, notes: 'Practice 10' });
-        TestRunner.assert.equal(ALL_BADGES[1].check(practices), true, 'Should earn 10 practices badge with 10 practices');
+        stats.practiceCount = 10;
+        TestRunner.assert.equal(tenPracticesBadge.check(stats), true, 'Should earn 10 practices badge with 10 practices');
 
-        // Add 49 more for 50 total
-        for (let i = 11; i <= 50; i++) {
-            practices.push({ id: i, notes: `Practice ${i}` });
-        }
-        TestRunner.assert.equal(ALL_BADGES[2].check(practices), true, 'Should earn 50 practices badge with 50 practices');
+        // Find 50 practices badge
+        const fiftyPracticesBadge = ALL_BADGES.find(b => b.id === 'fifty_practices');
+        stats.practiceCount = 50;
+        TestRunner.assert.equal(fiftyPracticesBadge.check(stats), true, 'Should earn 50 practices badge with 50 practices');
     });
 
     TestRunner.it('should check intensity badge', () => {
-        let practices = [];
+        const stats = { practiceCount: 5, totalMinutes: 0, totalHours: 0, avgRecentIntensity: 3, streaks: { current: 0, longest: 0 }, last7Days: 0, last14Days: 0, last30Days: 0 };
 
-        // Add practices with low intensity
-        for (let i = 0; i < 5; i++) {
-            practices.push({ id: i, notes: `Practice ${i}`, intensity: 3 });
-        }
-        TestRunner.assert.equal(ALL_BADGES[3].check(practices), false, 'Should not earn 4+ rating badge with avg 3');
+        const intensityBadge = ALL_BADGES.find(b => b.id === 'high_intensity_focus');
+        TestRunner.assert.truthy(intensityBadge, 'Should find high_intensity_focus badge');
+        TestRunner.assert.equal(intensityBadge.check(stats), false, 'Should not earn 4+ rating badge with avg 3');
 
-        // Replace with high intensity
-        practices = [];
-        for (let i = 0; i < 5; i++) {
-            practices.push({ id: i, notes: `Practice ${i}`, intensity: 8 });
-        }
-        TestRunner.assert.equal(ALL_BADGES[3].check(practices), true, 'Should earn 4+ rating badge with avg 8');
+        stats.avgRecentIntensity = 8;
+        TestRunner.assert.equal(intensityBadge.check(stats), true, 'Should earn 4+ rating badge with avg 8');
     });
 
     TestRunner.it('should check badge earning logic', () => {
         const currentProfile = { earnedBadges: [] };
-        const practices = [{ id: 1, notes: 'First practice' }];
+        const practices = [{ id: 1, notes: 'First practice', duration: 60, intensity: 5 }];
 
         const updatedProfile = checkBadges(practices, currentProfile);
 
         TestRunner.assert.truthy(updatedProfile, 'Should return updated profile');
         TestRunner.assert.equal(updatedProfile.earnedBadges.length, 1, 'Should have earned 1 badge');
-        TestRunner.assert.equal(updatedProfile.earnedBadges[0].id, 1, 'Should have earned first practice badge');
+        TestRunner.assert.equal(updatedProfile.earnedBadges[0].id, 'first_practice', 'Should have earned first practice badge');
         TestRunner.assert.hasProperty(updatedProfile.earnedBadges[0], 'earnedDate', 'Badge should have earned date');
         TestRunner.assert.equal(updatedProfile.earnedBadges[0].practiceNumber, 1, 'Badge should have practice number');
     });
 
     TestRunner.it('should not earn already earned badges', () => {
         const currentProfile = {
-            earnedBadges: [{ id: 1, earnedDate: '2025-01-01', practiceNumber: 1 }]
+            earnedBadges: [{ id: 'first_practice', earnedDate: '2025-01-01', practiceNumber: 1 }]
         };
-        const practices = [{ id: 1, notes: 'First practice' }, { id: 2, notes: 'Second practice' }];
+        const practices = [{ id: 1, notes: 'First practice', duration: 60 }, { id: 2, notes: 'Second practice', duration: 60 }];
 
         const updatedProfile = checkBadges(practices, currentProfile);
 
