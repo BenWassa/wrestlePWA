@@ -199,7 +199,7 @@ function countPracticesInWindow(practices, days) {
     }).length;
 }
 
-function calculatePracticeStats(practices) {
+export function calculatePracticeStats(practices) {
     const practiceCount = practices.length;
     const totalMinutes = practices.reduce((sum, p) => sum + (Number(p.duration) || 0), 0);
     const totalHours = totalMinutes / 60;

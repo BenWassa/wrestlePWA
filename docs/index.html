@@ -132,6 +132,51 @@
             <main class="panels">
               <!-- Dashboard -->
               <section id="section-dashboard" class="section ${currentTab === 'dashboard' ? 'active' : ''}">
+                <!-- Identity Level Card -->
+                <article class="panel level-card">
+                  <div class="level-header">
+                    <div class="level-title">
+                      <span class="level-number">Level ${IDENTITY_LEVELS.indexOf(identityProgress.currentLevel) + 1}</span>
+                      <span class="level-separator">·</span>
+                      <span class="level-name">${identityProgress.currentLevel.name}</span>
+                    </div>
+                    <p class="level-quote">"${identityProgress.narrative}"</p>
+                  </div>
+
+                  <div class="level-progress-section">
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill" style="width: ${identityProgress.progressPercent}%; background: ${identityProgress.currentLevel.color};"></div>
+                    </div>
+                    <div class="progress-info">
+                      <span class="progress-percent">${identityProgress.progressPercent}% Complete</span>
+                      ${identityProgress.nextLevel ? `
+                        <span class="progress-next">Next: ${identityProgress.nextLevel.name} at ${identityProgress.nextLevel.threshold} practices</span>
+                      ` : `
+                        <span class="progress-next">Maximum level achieved!</span>
+                      `}
+                    </div>
+                  </div>
+
+                  <div class="stats-grid-compact">
+                    <div class="stat-compact">
+                      <span class="stat-label-compact">Practices</span>
+                      <span class="stat-value-compact">${stats.totalPractices}</span>
+                    </div>
+                    <div class="stat-compact">
+                      <span class="stat-label-compact">Hours</span>
+                      <span class="stat-value-compact">${totalHours}</span>
+                    </div>
+                    <div class="stat-compact">
+                      <span class="stat-label-compact">Streak</span>
+                      <span class="stat-value-compact">${fullStats.streaks.current} ${fullStats.streaks.current > 0 ? '🔥' : '❄️'}</span>
+                    </div>
+                    <div class="stat-compact">
+                      <span class="stat-label-compact">Best</span>
+                      <span class="stat-value-compact">${fullStats.streaks.longest} days</span>
+                    </div>
+                  </div>
+                </article>
+
                 <article class="panel">
                   <div class="panel-header">
                     <div>

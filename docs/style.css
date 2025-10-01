@@ -893,8 +893,145 @@ input[type="range"]::-moz-range-thumb {
   font-size: 0.875rem;
 }
 
+/* Level Card - Clean Visual Dashboard */
+.level-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(17, 24, 39, 0.9));
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-card);
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(8, 12, 24, 0.5);
+}
+
+.level-header {
+  margin-bottom: 1.5rem;
+}
+
+.level-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.level-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.level-separator {
+  color: var(--color-text-muted);
+  font-weight: 300;
+}
+
+.level-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+
+.level-quote {
+  margin: 0;
+  font-style: italic;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.level-progress-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-bar-container {
+  height: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(234, 88, 12, 0.4);
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.progress-percent {
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+
+.progress-next {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.stats-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-label-compact {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.stat-value-compact {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
+  .stats-grid-compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .level-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .level-separator {
+    display: none;
+  }
+
+  .progress-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
   .current-level {
     flex-direction: column;
     text-align: center;
