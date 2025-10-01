@@ -1,7 +1,11 @@
-const CACHE_NAME = 'wrestling-journey-v1';
+const CACHE_NAME = 'wrestling-journey-v2'; // <--- UPDATED CACHE VERSION
 const urlsToCache = [
   '/',
-  '/index.html'
+  '/index.html',
+  '/style.css',       // <--- NEW: Crucial for styling
+  '/icon.svg',        // <--- NEW: App icon
+  '/manifest.json'    // <--- NEW: PWA metadata
+  // Future: '/db.js' or other script files
 ];
 
 // Install service worker and cache files

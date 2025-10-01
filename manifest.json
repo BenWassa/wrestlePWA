@@ -4,7 +4,7 @@
   "description": "Track your wrestling training journey",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#111827",
   "theme_color": "#ea580c",
   "orientation": "portrait",
   "icons": [
