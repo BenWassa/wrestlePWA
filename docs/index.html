@@ -123,6 +123,7 @@
             <nav class="tabs" role="tablist">
               <button id="tab-dashboard" class="tab ${currentTab === 'dashboard' ? 'active' : ''}" role="tab">Dashboard</button>
               <button id="tab-log" class="tab ${currentTab === 'log' ? 'active' : ''}" role="tab">Log</button>
+              <button id="tab-stats" class="tab ${currentTab === 'stats' ? 'active' : ''}" role="tab">Stats</button>
               <button id="tab-history" class="tab ${currentTab === 'history' ? 'active' : ''}" role="tab">History</button>
               <button id="tab-badges" class="tab ${currentTab === 'badges' ? 'active' : ''}" role="tab">Badges</button>
               <button id="tab-guide" class="tab ${currentTab === 'guide' ? 'active' : ''}" role="tab">Guide</button>
@@ -130,9 +131,10 @@
             </nav>
 
             <main class="panels">
-              <!-- Dashboard -->
+              <!-- Dashboard - Clean & Focused -->
               <section id="section-dashboard" class="section ${currentTab === 'dashboard' ? 'active' : ''}">
-                <!-- Identity Level Card -->
+                
+                <!-- Panel 1: Identity Level -->
                 <article class="panel level-card">
                   <div class="level-header">
                     <div class="level-title">
@@ -177,103 +179,76 @@
                   </div>
                 </article>
 
-                <article class="panel">
+                <!-- Panel 2: Current Phase & Actions -->
+                <article class="panel phase-card">
                   <div class="panel-header">
                     <div>
                       <p class="eyebrow">Current Phase</p>
                       <h2>${currentPhase.name}</h2>
                     </div>
-                    <span class="phase-chip">${stats.totalPractices} logged</span>
                   </div>
-                  <p class="panel-subtitle">Next milestone: ${nextMilestoneLabel}</p>
-                  <div class="progress-summary">
-                    <div class="progress-visual">
-                      <div class="progress-bar-outer" aria-hidden="true">
-                        <div class="progress-bar-inner" style="width: ${progressPercent}%;"></div>
-                      </div>
-                      <div class="progress-label">${nextMilestone ? `${practiceCount - startMilestoneValue} of ${milestoneDenominator} practices toward ${nextMilestone.name}` : `${practiceCount} practices logged`}</div>
+                  
+                  <div class="milestone-progress">
+                    <p class="milestone-label">Next milestone: ${nextMilestoneLabel}</p>
+                    <div class="progress-bar-outer">
+                      <div class="progress-bar-inner" style="width: ${progressPercent}%;"></div>
                     </div>
-                    <div class="progress-details">
-                      <p class="progress-count">${practiceCount}${nextMilestone ? ` / ${nextMilestone.milestone}` : ''} practices logged</p>
-                      <p class="progress-note">${nextMilestone ? (sessionsRemaining > 0 ? `${sessionsRemaining} more ${sessionsLabel} until ${nextMilestone.name}.` : 'You hit this milestone. Stay humble and keep the reps coming.') : 'You carved out your own pace. Keep the story going.'}</p>
-                      <p class="progress-last">${lastPractice ? `Last logged: ${new Date(lastPractice.date).toLocaleDateString()} · ${lastPractice.type}` : 'You have not logged a practice yet. Start today—no fluff, just work.'}</p>
-                    </div>
+                    <p class="milestone-detail">${nextMilestone ? `${sessionsRemaining} more ${sessionsLabel} until ${nextMilestone.name}` : 'You carved out your own pace. Keep the story going.'}</p>
                   </div>
+
+                  <div class="last-practice">
+                    <p class="last-practice-label">Last practice</p>
+                    <p class="last-practice-detail">${lastPractice ? `${new Date(lastPractice.date).toLocaleDateString()} · ${lastPractice.type} · ${lastPractice.duration} min` : 'No practices logged yet. Start today.'}</p>
+                  </div>
+
                   <div class="dashboard-actions">
                     <button class="button" data-switch-to="log">Add practice</button>
                     <button class="button ghost" data-switch-to="history">View history</button>
                   </div>
                 </article>
 
+              </section>
+
+              <!-- Stats (Moved from Dashboard) -->
+              <section id="section-stats" class="section ${currentTab === 'stats' ? 'active' : ''}">
                 <article class="panel">
                   <div class="panel-header">
-                    <h3>Consistency stats</h3>
+                    <h2>Detailed Statistics</h2>
+                    <p class="panel-subtitle">Your wrestling data breakdown.</p>
                   </div>
                   <div class="stats-grid">
                     <div class="stat-card">
-                      <p class="stat-label">Practices</p>
+                      <p class="stat-label">Total Practices</p>
                       <p class="stat-value">${stats.totalPractices}</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Hours logged</p>
+                      <p class="stat-label">Hours Logged</p>
                       <p class="stat-value">${isNaN(totalHours) ? '0.0' : totalHours}</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Current streak</p>
+                      <p class="stat-label">Current Streak</p>
                       <p class="stat-value">${fullStats.streaks.current} days</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Longest streak</p>
+                      <p class="stat-label">Longest Streak</p>
                       <p class="stat-value">${fullStats.streaks.longest} days</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Avg intensity</p>
+                      <p class="stat-label">Avg Intensity</p>
                       <p class="stat-value">${stats.avgIntensity}</p>
                     </div>
                     <div class="stat-card">
-                      <p class="stat-label">Started</p>
+                      <p class="stat-label">Journey Started</p>
                       <p class="stat-value">${profile.startDate ? new Date(profile.startDate).toLocaleDateString() : 'Today'}</p>
                     </div>
-                  </div>
-                </article>
-
-                <article class="panel">
-                  <div class="panel-header">
-                    <div>
-                      <h3>Journey Status</h3>
-                      <p class="panel-subtitle">Your current identity level in the wrestling journey.</p>
+                    <div class="stat-card">
+                      <p class="stat-label">Last 7 Days</p>
+                      <p class="stat-value">${fullStats.last7Days} practices</p>
                     </div>
-                    <button class="button-link" data-switch-to="badges">View milestones</button>
-                  </div>
-                  <div class="identity-display">
-                    <div class="current-level" style="border-color: ${identityProgress.currentLevel.color}; background: linear-gradient(135deg, ${identityProgress.currentLevel.color}15, ${identityProgress.currentLevel.color}08);">
-                      <div class="level-badge" style="background: ${identityProgress.currentLevel.color};">
-                        ${identityProgress.currentLevel.name.charAt(0)}
-                      </div>
-                      <div class="level-info">
-                        <h4>${identityProgress.currentLevel.name}</h4>
-                        <p class="level-description">${identityProgress.currentLevel.description}</p>
-                        <p class="level-narrative">${identityProgress.narrative}</p>
-                      </div>
+                    <div class="stat-card">
+                      <p class="stat-label">Last 30 Days</p>
+                      <p class="stat-value">${fullStats.last30Days} practices</p>
                     </div>
-
-                    ${identityProgress.nextLevel ? `
-                    <div class="progress-to-next">
-                      <div class="progress-header">
-                        <span class="progress-label">Progress to ${identityProgress.nextLevel.name}</span>
-                        <span class="progress-count">${identityProgress.practicesToNext} practices to go</span>
-                      </div>
-                      <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${identityProgress.progressPercent}%; background: ${identityProgress.nextLevel.color};"></div>
-                      </div>
-                      <p class="progress-milestone">${practiceCount} of ${identityProgress.nextLevel.threshold} practices</p>
-                    </div>
-                    ` : `
-                    <div class="max-level">
-                      <p class="max-level-message">🏆 You've reached the highest level: ${identityProgress.currentLevel.name}</p>
-                      <p class="max-level-subtitle">Continue your journey — every practice makes you stronger.</p>
-                    </div>
-                    `}
                   </div>
                 </article>
               </section>
