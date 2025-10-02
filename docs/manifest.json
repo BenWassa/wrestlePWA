@@ -2,7 +2,9 @@
   "name": "Wrestling Journey",
   "short_name": "Wrestling",
   "description": "Track your wrestling training journey",
-  "start_url": "/wrestlePWA/",  <-- CRITICAL CHANGE
+  "id": "wrestling-journey",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#ea580c",
