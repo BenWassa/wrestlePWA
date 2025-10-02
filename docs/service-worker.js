@@ -1,53 +1,42 @@
-const CACHE_NAME = 'wrestling-journey-v7'; // <--- UPDATED CACHE VERSION (Pixel 8 mobile optimization)
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/style.css',       // <--- Crucial for styling
-  '/icon.svg',        // <--- App icon
-  '/manifest.json',   // <--- PWA metadata
-  '/db.js'            // <--- NEW: IndexedDB wrapper for data persistence
+const CACHE_VERSION = 'v9';
+const CACHE_NAME = `wrestling-journey-${CACHE_VERSION}`;
+const OFFLINE_RESOURCES = [
+  './',
+  './index.html',
+  './style.css',
+  './icon.svg',
+  './manifest.json',
+  './db.js'
 ];
 
-// Install service worker and cache files
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_RESOURCES))
   );
   self.skipWaiting();
 });
 
-// Fetch from cache first, then network
 self.addEventListener('fetch', event => {
+  const { request } = event;
+
+  if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
+    caches.match(request).then(response => response || fetch(request))
   );
 });
 
-// Clean up old caches
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then(cacheNames =>
+      Promise.all(
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => caches.delete(cacheName))
+      )
+    )
   );
   self.clients.claim();
 });
