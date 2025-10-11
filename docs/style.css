@@ -726,6 +726,7 @@ input[type="range"]::-moz-range-thumb {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .practice-metrics {
@@ -894,6 +895,11 @@ input[type="range"]::-moz-range-thumb {
   max-height: 260px;
   overflow-y: auto;
   white-space: pre-wrap;
+}
+
+.prompt-text.expanded {
+  max-height: none;
+  overflow: visible;
 }
 
 .prompt-actions {
