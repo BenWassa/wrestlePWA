@@ -1,11 +1,49 @@
 /* --- START OF FILE db.js (Refactored for Profile Store) --- */
 
 const DB_NAME = 'WrestlingJourneyDB';
-const DB_VERSION = 2; // INCREMENT VERSION TO TRIGGER ONUPGRADENEEDED
+const DB_VERSION = 3; // Incremented for backup settings additions
 const STORE_PRACTICES = 'practices';
 const STORE_PROFILE = 'profile'; // New store for global settings/badges
 
 let db;
+
+export const DEFAULT_BACKUP_SETTINGS = {
+    enabled: false,
+    directoryHandle: null,
+    lastBackup: null,
+    lastBackupFileName: null,
+    lastBackupBytes: null,
+    maxBackups: 5,
+    lastError: null
+};
+
+export function normalizeBackupSettings(settings = {}) {
+    return {
+        ...DEFAULT_BACKUP_SETTINGS,
+        ...settings
+    };
+}
+
+function createDefaultProfile() {
+    return {
+        key: 'user',
+        earnedBadges: [], // [{ id, earnedDate, practiceNumber }] - legacy
+        earnedMilestones: [], // [{ id, name, earnedDate, practiceNumber, level, description }] - new system
+        currentPhase: 1,
+        streaks: { days: 0, weeks: 0 },
+        backupSettings: { ...DEFAULT_BACKUP_SETTINGS }
+    };
+}
+
+function mergeProfile(profile = {}) {
+    const defaultProfile = createDefaultProfile();
+    const merged = {
+        ...defaultProfile,
+        ...profile
+    };
+    merged.backupSettings = normalizeBackupSettings(profile.backupSettings);
+    return merged;
+}
 
 function normalizePractice(practice = {}) {
   return {
@@ -110,14 +148,6 @@ export async function deletePractice(id) {
 
 // --- PROFILE STORE OPERATIONS (Settings, Badges, Phase) ---
 
-const DEFAULT_PROFILE = {
-    key: 'user',
-    earnedBadges: [], // [{ id, earnedDate, practiceNumber }] - legacy
-    earnedMilestones: [], // [{ id, name, earnedDate, practiceNumber, level, description }] - new system
-    currentPhase: 1,
-    streaks: { days: 0, weeks: 0 }
-};
-
 export async function getProfile() {
     const dbInstance = await openDB();
     return new Promise((resolve, reject) => {
@@ -125,7 +155,10 @@ export async function getProfile() {
         const store = transaction.objectStore(STORE_PROFILE);
         const request = store.get('user');
 
-        request.onsuccess = () => resolve(request.result || DEFAULT_PROFILE);
+        request.onsuccess = () => {
+            const storedProfile = request.result ? mergeProfile(request.result) : createDefaultProfile();
+            resolve(storedProfile);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -135,7 +168,8 @@ export async function setProfile(profile) {
     return new Promise((resolve, reject) => {
         const transaction = dbInstance.transaction([STORE_PROFILE], 'readwrite');
         const store = transaction.objectStore(STORE_PROFILE);
-        const request = store.put({ ...DEFAULT_PROFILE, ...profile, key: 'user' });
+        const mergedProfile = mergeProfile(profile);
+        const request = store.put({ ...mergedProfile, key: 'user' });
 
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
@@ -160,6 +194,39 @@ export async function clearAllData() {
 
 // Automatically open the DB on script load for readiness
 openDB();
+
+function prepareBackupSettingsForExport(settings) {
+    if (!settings) {
+        return undefined;
+    }
+    const { directoryHandle, ...rest } = settings;
+    return {
+        ...rest,
+        hasDirectoryHandle: Boolean(directoryHandle)
+    };
+}
+
+export function prepareProfileForExport(profile) {
+    const merged = mergeProfile(profile);
+    const { backupSettings, ...rest } = merged;
+    return {
+        ...rest,
+        backupSettings: prepareBackupSettingsForExport(backupSettings)
+    };
+}
+
+export async function exportAllData() {
+    const [practices, profile] = await Promise.all([
+        getPractices(),
+        getProfile()
+    ]);
+
+    return {
+        practices,
+        profile: prepareProfileForExport(profile),
+        exportDate: new Date().toISOString()
+    };
+}
 
 // --- BADGE SYSTEM ---
 
