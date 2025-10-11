@@ -1136,13 +1136,59 @@ Format: Start with a bold title like "Practice #${practiceNumber}: [Your Title]"
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
+        let refreshing = false;
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) {
+            return;
+          }
+          refreshing = true;
+          window.location.reload();
+        });
+
         navigator.serviceWorker.register('./service-worker.js')
           .then(registration => {
             console.log('Service Worker registered:', registration);
+
+            const requestSkipWaiting = (worker) => {
+              if (!worker || !navigator.serviceWorker.controller) {
+                return;
+              }
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            };
+
+            const trackInstalling = (worker) => {
+              if (!worker) {
+                return;
+              }
+              worker.addEventListener('statechange', () => {
+                if (worker.state === 'installed') {
+                  requestSkipWaiting(worker);
+                }
+              });
+            };
+
+            if (registration.waiting) {
+              requestSkipWaiting(registration.waiting);
+            }
+
+            if (registration.installing) {
+              trackInstalling(registration.installing);
+            }
+
+            registration.addEventListener('updatefound', () => {
+              trackInstalling(registration.installing);
+            });
           })
           .catch(error => {
             console.log('Service Worker registration failed:', error);
           });
+
+        navigator.serviceWorker.addEventListener('message', event => {
+          if (event.data && event.data.type === 'SW_ACTIVATED') {
+            console.log(`Service Worker activated with version ${event.data.version}`);
+          }
+        });
       });
     }
   </script>
