@@ -60,6 +60,7 @@
       let storyDraft = '';
       let editingStory = false;
       let currentPromptText = '';
+      let expandedPromptPracticeId = null;
 
       // --- RENDER FUNCTION ---
       async function render() {
@@ -73,6 +74,7 @@
           promptCopyError = '';
           storyDraft = '';
           editingStory = false;
+          expandedPromptPracticeId = null;
         }
 
         const { current: currentPhase, next: nextPhase } = dbGetPhase(practices.length);
@@ -130,7 +132,12 @@
         const storyPromptText = shouldShowPrompt && promptPractice
           ? generateStoryPrompt(promptPractice, fullStats, identityLevel)
           : '';
-        currentPromptText = storyPromptText;
+        const trimmedPromptText = storyPromptText ? storyPromptText.trim() : '';
+        const promptPreviewText = trimmedPromptText ? getPreviewText(trimmedPromptText) : '';
+        const isPromptExpanded = Boolean(selectedPractice && expandedPromptPracticeId === selectedPractice.id);
+        const isPromptTruncated = Boolean(trimmedPromptText && promptPreviewText && promptPreviewText !== trimmedPromptText);
+        const promptDisplayText = (isPromptExpanded || !isPromptTruncated) ? trimmedPromptText : promptPreviewText;
+        currentPromptText = trimmedPromptText;
         const storySavedDate = selectedPractice?.storyGeneratedDate
           ? new Date(selectedPractice.storyGeneratedDate).toLocaleString()
           : '';
@@ -179,11 +186,12 @@
                     <h3>AI Story Prompt</h3>
                     <p class="prompt-instructions">Copy and paste this into Claude.ai, ChatGPT, or any AI assistant.</p>
                   </div>
-                  <pre id="story-prompt" class="prompt-text">${escapeHTML(storyPromptText)}</pre>
+                  <pre id="story-prompt" class="prompt-text${isPromptExpanded ? ' expanded' : ''}">${escapeHTML(promptDisplayText)}</pre>
                   <div class="prompt-actions">
                     <button id="copy-story-prompt" class="button secondary">${promptCopyState === 'success' ? 'Copied!' : 'Copy to Clipboard'}</button>
                     ${selectedPracticeHasStory ? '' : `<button id="regenerate-story-prompt" class="button ghost">Regenerate Prompt</button>`}
                   </div>
+                  ${isPromptTruncated ? `<button id="toggle-prompt-visibility" class="button ghost small" data-expanded="${isPromptExpanded ? 'true' : 'false'}">${isPromptExpanded ? 'Show less' : 'Show full prompt'}</button>` : ''}
                   ${promptCopyState === 'success' ? `<p class="copy-feedback success">Prompt copied. Paste into your favorite AI and bring the story back.</p>` : ''}
                   ${(promptCopyState === 'error' || promptCopyState === 'manual') ? `<p class="copy-feedback error">${escapeHTML(promptCopyError)}</p>` : ''}
                 </section>
@@ -486,7 +494,10 @@
                                     <time class="practice-date">${new Date(p.date).toLocaleDateString()}</time>
                                   </div>
                                 </div>
-                                <p class="practice-notes">${p.notes}</p>
+                                ${(() => {
+                                  const preview = getPreviewText(p.notes);
+                                  return preview ? `<p class="practice-notes">${escapeHTML(preview)}</p>` : '';
+                                })()}
                                 <div class="practice-metrics">
                                   ${p.duration ? `<span>${p.duration} min</span>` : ''}
                                   ${p.intensity ? `<span>Intensity ${p.intensity}/10</span>` : ''}
@@ -655,6 +666,7 @@
             promptCopyError = '';
             storyDraft = '';
             editingStory = false;
+            expandedPromptPracticeId = null;
             render();
           });
         }
@@ -669,6 +681,10 @@
         const copyPromptBtn = document.getElementById('copy-story-prompt');
         if (copyPromptBtn) {
           copyPromptBtn.addEventListener('click', handleCopyStoryPrompt);
+        }
+        const togglePromptBtn = document.getElementById('toggle-prompt-visibility');
+        if (togglePromptBtn) {
+          togglePromptBtn.addEventListener('click', handleTogglePromptVisibility);
         }
         const editStoryBtn = document.getElementById('edit-story');
         if (editStoryBtn) {
@@ -788,6 +804,7 @@
                 promptCopyError = '';
                 storyDraft = '';
                 editingStory = false;
+                expandedPromptPracticeId = null;
             }
             // Re-render to update history and stats
             render();
@@ -881,6 +898,7 @@
         promptCopyError = '';
         storyDraft = '';
         editingStory = false;
+        expandedPromptPracticeId = null;
         render();
       }
 
@@ -895,6 +913,7 @@
         promptCopyError = '';
         storyDraft = '';
         editingStory = false;
+        expandedPromptPracticeId = null;
         render();
       }
 
@@ -905,6 +924,7 @@
         promptCopyError = '';
         storyDraft = '';
         editingStory = false;
+        expandedPromptPracticeId = null;
         render();
       }
 
@@ -938,6 +958,7 @@
         promptCopyState = 'idle';
         promptCopyError = '';
         storyDraft = practice.aiStory || '';
+        expandedPromptPracticeId = null;
         render();
       }
 
@@ -949,6 +970,7 @@
         }
         promptCopyState = 'idle';
         promptCopyError = '';
+        expandedPromptPracticeId = null;
         render();
       }
 
@@ -958,6 +980,18 @@
         if (saveButton) {
           saveButton.disabled = !storyDraft.trim();
         }
+      }
+
+      function handleTogglePromptVisibility() {
+        if (!selectedPracticeId) {
+          return;
+        }
+        if (expandedPromptPracticeId === selectedPracticeId) {
+          expandedPromptPracticeId = null;
+        } else {
+          expandedPromptPracticeId = selectedPracticeId;
+        }
+        render();
       }
 
       async function handleSaveStory() {
@@ -980,6 +1014,7 @@
           promptCopyError = '';
           storyDraft = '';
           editingStory = false;
+          expandedPromptPracticeId = null;
           render();
         } catch (error) {
           console.error('Error saving story', error);
@@ -994,6 +1029,31 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function getPreviewText(text = '', maxLines = 2, maxCharacters = 160) {
+        if (text === null || text === undefined) {
+          return '';
+        }
+        const normalized = String(text).trim();
+        if (!normalized) {
+          return '';
+        }
+        const lines = normalized.split(/\r?\n/);
+        let truncated = false;
+        const limitedLines = lines.slice(0, maxLines);
+        if (lines.length > maxLines) {
+          truncated = true;
+        }
+        let preview = limitedLines.join('\n');
+        if (preview.length > maxCharacters) {
+          preview = preview.slice(0, maxCharacters).trimEnd();
+          truncated = true;
+        }
+        if (!truncated) {
+          return normalized;
+        }
+        return `${preview.replace(/[\s\r\n]+$/g, '')}…`;
       }
 
       function generateStoryPrompt(practice, userStats, identityLevel) {
