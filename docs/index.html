@@ -45,7 +45,10 @@
       IDENTITY_LEVELS,
       getCurrentIdentityLevel,
       getIdentityProgress,
-      MILESTONES
+      MILESTONES,
+      exportAllData,
+      DEFAULT_BACKUP_SETTINGS,
+      normalizeBackupSettings
     } from './db.js';
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -62,10 +65,22 @@
       let currentPromptText = '';
       let expandedPromptPracticeId = null;
 
+      const textEncoder = new TextEncoder();
+      const BACKUP_FILE_PREFIX = 'wrestling_journey_backup';
+      const BACKUP_FILE_EXTENSION = '.json';
+      let backupTimeoutId = null;
+      let backupInProgress = false;
+      let queuedBackupReason = null;
+      let queuedBackupUserInitiated = false;
+
       // --- RENDER FUNCTION ---
       async function render() {
         practices = await getPractices();
         profile = await getProfile();
+        profile = {
+          ...profile,
+          backupSettings: normalizeBackupSettings(profile.backupSettings)
+        };
 
         if (selectedPracticeId && !practices.some(p => p.id === selectedPracticeId)) {
           selectedPracticeId = null;
@@ -84,6 +99,7 @@
         if (updatedProfile) {
             profile = updatedProfile;
             await setProfile(profile);
+            scheduleBackup('profile-updated');
         }
 
         const stats = {
@@ -148,6 +164,7 @@
             (showPromptForPractice && !selectedPracticeHasStory && (promptCopyState === 'success' || promptCopyState === 'manual'))
           )
         );
+        const backupSectionMarkup = renderBackupSettingsSection();
         const practiceDetailMarkup = selectedPractice
           ? `
             <div class="practice-detail">
@@ -628,6 +645,7 @@
                     <h2>Data & settings</h2>
                     <p class="panel-subtitle">Your data stays on-device. Export for backups, clear when needed.</p>
                   </div>
+                  ${backupSectionMarkup}
                   <div class="settings-actions">
                     <button id="export-btn" class="button secondary">Export JSON</button>
                     <button id="clear-btn" class="button danger">Clear all data</button>
@@ -719,6 +737,18 @@
         document.getElementById('export-btn').addEventListener('click', handleExportData);
         document.getElementById('clear-btn').addEventListener('click', handleClearData);
         document.getElementById('import-btn').addEventListener('click', handleImportData);
+        const chooseBackupBtn = document.getElementById('choose-backup-folder-btn');
+        if (chooseBackupBtn) {
+          chooseBackupBtn.addEventListener('click', handleConfigureBackupFolder);
+        }
+        const disableBackupBtn = document.getElementById('disable-backup-btn');
+        if (disableBackupBtn) {
+          disableBackupBtn.addEventListener('click', handleDisableBackups);
+        }
+        const backupNowBtn = document.getElementById('backup-now-btn');
+        if (backupNowBtn) {
+          backupNowBtn.addEventListener('click', handleManualBackup);
+        }
 
         // Initial slider values
         updateSliderValue('intensity');
@@ -726,6 +756,349 @@
         updateSliderValue('mental');
       }
       
+      // Backup helpers
+      function renderBackupSettingsSection() {
+        const settings = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : { ...DEFAULT_BACKUP_SETTINGS };
+        if (!isBackupSupported()) {
+          return `
+            <section class="settings-backup">
+              <div class="settings-backup-header">
+                <h3>Smart backups</h3>
+                <p>Automatic folder backups require a newer browser. You can still export JSON manually.</p>
+              </div>
+              <div class="backup-status">
+                <span class="status-pill warning">Unsupported</span>
+                <p>Your browser does not support saving directly to a folder. Use the manual export option below.</p>
+              </div>
+            </section>
+          `;
+        }
+
+        const statusMarkup = getBackupStatusMarkup(settings);
+        const actionMarkup = getBackupActionMarkup(settings);
+        return `
+          <section class="settings-backup">
+            <div class="settings-backup-header">
+              <h3>Smart backups</h3>
+              <p>Pick a folder once—fresh snapshots stay on your device with a rolling history.</p>
+            </div>
+            <div class="backup-status">
+              ${statusMarkup}
+            </div>
+            <div class="backup-actions">
+              ${actionMarkup}
+            </div>
+          </section>
+        `;
+      }
+
+      function getBackupStatusMarkup(settings) {
+        const lines = [];
+        if (!settings.enabled || !settings.directoryHandle) {
+          lines.push('<span class="status-pill inactive">Inactive</span>');
+          lines.push('<p>Automatic backups are off. Choose a folder to start protecting your journey.</p>');
+        } else {
+          const lastBackup = settings.lastBackup ? new Date(settings.lastBackup) : null;
+          const lastBackupText = lastBackup ? `Last backup ${formatRelativeTime(lastBackup)} (${lastBackup.toLocaleString()}).` : 'No backups yet. One will run shortly.';
+          const keepCount = Number.isFinite(settings.maxBackups) ? settings.maxBackups : DEFAULT_BACKUP_SETTINGS.maxBackups;
+          const sizeText = typeof settings.lastBackupBytes === 'number' ? `Latest file ${formatBytes(settings.lastBackupBytes)}.` : '';
+          lines.push('<span class="status-pill active">Enabled</span>');
+          lines.push(`<p>Keeping up to ${keepCount} recent backups in your chosen folder. ${lastBackupText}</p>`);
+          if (sizeText) {
+            lines.push(`<p>${sizeText}</p>`);
+          }
+          if (backupInProgress) {
+            lines.push('<p class="backup-running">Backup in progress…</p>');
+          }
+        }
+        if (settings.lastError) {
+          lines.push(`<p class="backup-error">${escapeHTML(settings.lastError)}</p>`);
+        }
+        return lines.join('');
+      }
+
+      function getBackupActionMarkup(settings) {
+        if (!isBackupSupported()) {
+          return '';
+        }
+        const supportsBackups = settings.enabled && !!settings.directoryHandle;
+        const chooseLabel = supportsBackups ? 'Change backup folder' : 'Choose backup folder';
+        const backupNowButton = supportsBackups
+          ? `<button id="backup-now-btn" class="button secondary" ${backupInProgress ? 'disabled' : ''}>${backupInProgress ? 'Backing up…' : 'Backup now'}</button>`
+          : '<button id="backup-now-btn" class="button secondary" disabled>Backup now</button>';
+        const changeButton = `<button id="choose-backup-folder-btn" class="button ghost">${chooseLabel}</button>`;
+        const disableButton = supportsBackups
+          ? '<button id="disable-backup-btn" class="button ghost danger">Disable backups</button>'
+          : '';
+        return `${backupNowButton}${changeButton}${disableButton}`;
+      }
+
+      function isBackupSupported() {
+        return typeof window.showDirectoryPicker === 'function' && 'FileSystemDirectoryHandle' in window;
+      }
+
+      function isBackupEnabled() {
+        return Boolean(profile?.backupSettings?.enabled && profile.backupSettings.directoryHandle);
+      }
+
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) {
+          return '';
+        }
+        const units = ['bytes', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+          value /= 1024;
+          unitIndex += 1;
+        }
+        return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+      }
+
+      function formatRelativeTime(date) {
+        try {
+          const now = new Date();
+          const diffMs = now.getTime() - date.getTime();
+          if (!Number.isFinite(diffMs)) {
+            return date.toLocaleString();
+          }
+          const diffMinutes = Math.round(diffMs / (1000 * 60));
+          if (diffMinutes < 1) return 'just now';
+          if (diffMinutes < 60) return `${diffMinutes} min ago`;
+          const diffHours = Math.round(diffMinutes / 60);
+          if (diffHours < 24) return `${diffHours} hr${diffHours === 1 ? '' : 's'} ago`;
+          const diffDays = Math.round(diffHours / 24);
+          if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+          const diffWeeks = Math.round(diffDays / 7);
+          if (diffWeeks < 5) return `${diffWeeks} week${diffWeeks === 1 ? '' : 's'} ago`;
+          return date.toLocaleDateString();
+        } catch (error) {
+          return date.toLocaleString();
+        }
+      }
+
+      async function handleConfigureBackupFolder() {
+        if (!isBackupSupported()) {
+          alert('Backups require a browser that supports the File System Access API (Chrome, Edge, or Android WebView).');
+          return;
+        }
+        try {
+          const directoryHandle = await window.showDirectoryPicker();
+          const permission = await ensureDirectoryPermission(directoryHandle);
+          if (permission !== 'granted') {
+            alert('We need write access to save backups. Please try again and allow access.');
+            return;
+          }
+          await updateBackupSettings({
+            enabled: true,
+            directoryHandle,
+            lastError: null
+          });
+          scheduleBackup('folder-selected', { immediate: true, userInitiated: true });
+        } catch (error) {
+          if (error?.name === 'AbortError') {
+            return;
+          }
+          console.error('Error selecting backup folder', error);
+          alert('Could not set up the backup folder. Please try again.');
+        }
+      }
+
+      async function handleDisableBackups() {
+        if (!profile?.backupSettings?.enabled) {
+          return;
+        }
+        if (!confirm('Disable automatic backups? You can always turn them back on later.')) {
+          return;
+        }
+        await updateBackupSettings({
+          enabled: false,
+          directoryHandle: null,
+          lastError: null
+        });
+      }
+
+      async function handleManualBackup() {
+        if (!isBackupEnabled()) {
+          alert('Choose a backup folder first.');
+          return;
+        }
+        scheduleBackup('manual', { immediate: true, userInitiated: true });
+      }
+
+      async function ensureDirectoryPermission(directoryHandle) {
+        if (!directoryHandle) {
+          return 'denied';
+        }
+        if (!directoryHandle.queryPermission || !directoryHandle.requestPermission) {
+          return 'granted';
+        }
+        let permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
+        if (permission === 'granted') {
+          return 'granted';
+        }
+        if (permission === 'prompt') {
+          permission = await directoryHandle.requestPermission({ mode: 'readwrite' });
+        }
+        return permission;
+      }
+
+      function scheduleBackup(reason, { immediate = false, userInitiated = false } = {}) {
+        if (!isBackupEnabled()) {
+          return;
+        }
+        if (backupTimeoutId) {
+          clearTimeout(backupTimeoutId);
+          backupTimeoutId = null;
+        }
+        if (immediate) {
+          runBackup(reason, { userInitiated });
+          return;
+        }
+        backupTimeoutId = setTimeout(() => {
+          backupTimeoutId = null;
+          runBackup(reason, { userInitiated });
+        }, 1500);
+      }
+
+      async function runBackup(reason, { userInitiated = false } = {}) {
+        if (!isBackupEnabled()) {
+          return;
+        }
+        if (backupInProgress) {
+          queuedBackupReason = reason;
+          queuedBackupUserInitiated = queuedBackupUserInitiated || userInitiated;
+          return;
+        }
+        backupInProgress = true;
+        render();
+        try {
+          const result = await performBackup(reason);
+          if (result) {
+            await updateBackupSettings({
+              lastBackup: result.timestamp,
+              lastBackupFileName: result.fileName,
+              lastBackupBytes: result.bytes,
+              lastError: null
+            }, { silent: true });
+            render();
+          }
+        } catch (error) {
+          console.error('Backup failed', error);
+          const message = error?.message || 'Automatic backup failed. Please choose the folder again.';
+          const permissionDenied = /denied|permission/i.test(message);
+          const updates = {
+            lastError: message
+          };
+          if (permissionDenied) {
+            updates.enabled = false;
+            updates.directoryHandle = null;
+          }
+          await updateBackupSettings(updates, { silent: true });
+          if (userInitiated) {
+            alert(message);
+          }
+          render();
+        } finally {
+          backupInProgress = false;
+          if (queuedBackupReason) {
+            const nextReason = queuedBackupReason;
+            const nextUserInitiated = queuedBackupUserInitiated;
+            queuedBackupReason = null;
+            queuedBackupUserInitiated = false;
+            scheduleBackup(nextReason, { immediate: true, userInitiated: nextUserInitiated });
+          }
+        }
+      }
+
+      async function performBackup(reason) {
+        const settings = profile?.backupSettings;
+        if (!settings?.directoryHandle) {
+          throw new Error('Backup folder is missing. Choose a folder to continue.');
+        }
+        const permission = await ensureDirectoryPermission(settings.directoryHandle);
+        if (permission !== 'granted') {
+          throw new Error('Permission to write to the backup folder was denied.');
+        }
+        const snapshot = await exportAllData();
+        const nowIso = new Date().toISOString();
+        const safeTimestamp = nowIso.replace(/[:]/g, '-');
+        const fileName = `${BACKUP_FILE_PREFIX}-${safeTimestamp}${BACKUP_FILE_EXTENSION}`;
+        const payload = {
+          ...snapshot,
+          backup: {
+            generatedAt: nowIso,
+            reason,
+            version: 1
+          }
+        };
+        const json = JSON.stringify(payload, null, 2);
+        const buffer = textEncoder.encode(json);
+        const fileHandle = await settings.directoryHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(buffer);
+        await writable.close();
+        await pruneOldBackups(settings.directoryHandle, settings.maxBackups || DEFAULT_BACKUP_SETTINGS.maxBackups, fileName);
+        return {
+          fileName,
+          bytes: buffer.byteLength,
+          timestamp: nowIso
+        };
+      }
+
+      async function pruneOldBackups(directoryHandle, maxBackups, latestFileName) {
+        if (!directoryHandle || !maxBackups || maxBackups < 1) {
+          return;
+        }
+        const backups = [];
+        try {
+          for await (const [name, handle] of directoryHandle.entries()) {
+            if (!name.endsWith(BACKUP_FILE_EXTENSION) || !name.startsWith(BACKUP_FILE_PREFIX)) {
+              continue;
+            }
+            if (name === latestFileName) {
+              backups.push({ name, handle, lastModified: Date.now() });
+              continue;
+            }
+            try {
+              const file = await handle.getFile();
+              backups.push({ name, handle, lastModified: file.lastModified });
+            } catch (error) {
+              console.warn('Unable to inspect backup file', name, error);
+            }
+          }
+        } catch (error) {
+          console.warn('Unable to enumerate backup directory', error);
+          return;
+        }
+        backups.sort((a, b) => a.lastModified - b.lastModified);
+        while (backups.length > maxBackups) {
+          const oldest = backups.shift();
+          try {
+            await directoryHandle.removeEntry(oldest.name);
+          } catch (error) {
+            console.warn('Unable to remove old backup', oldest.name, error);
+            break;
+          }
+        }
+      }
+
+      async function updateBackupSettings(updates, { silent = false } = {}) {
+        const current = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : { ...DEFAULT_BACKUP_SETTINGS };
+        const merged = {
+          ...current,
+          ...updates
+        };
+        profile = {
+          ...profile,
+          backupSettings: merged
+        };
+        await setProfile(profile);
+        if (!silent) {
+          render();
+        }
+      }
+
       // --- HANDLERS ---
       function updateSliderValue(name) {
         document.getElementById(`${name}-value`).textContent = document.getElementById(`practice-${name}`).value;
@@ -771,9 +1144,10 @@
             aiStory: null,
             storyGeneratedDate: null
         };
-        
+
         await dbAddPractice(newPractice);
-        
+        scheduleBackup('practice-added');
+
         // Clear the form
         document.getElementById('practice-form').reset();
         document.getElementById('practice-date').value = new Date().toISOString().split('T')[0];
@@ -797,6 +1171,7 @@
 
         if (confirm("Are you sure you want to delete this practice log?")) {
             await dbDeletePractice(id);
+            scheduleBackup('practice-deleted');
             if (selectedPracticeId === id) {
                 selectedPracticeId = null;
                 showPromptForPractice = false;
@@ -811,23 +1186,23 @@
         }
       }
       
-      function handleExportData() {
-        // Collect all data
-        const data = {
-            practices: practices,
-            profile: profile,
-            exportDate: new Date().toISOString()
-        };
-        const dataStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `wrestling_journey_export_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      async function handleExportData() {
+        try {
+          const snapshot = await exportAllData();
+          const dataStr = JSON.stringify(snapshot, null, 2);
+          const blob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `wrestling_journey_export_${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Error exporting data', error);
+          alert('Could not export your data. Please try again.');
+        }
       }
 
       async function handleClearData() {
@@ -842,6 +1217,8 @@
       document.getElementById('confirm-clear').addEventListener('click', async () => {
           document.getElementById('confirm-modal').style.display = 'none';
           await clearAllData();
+          profile = await getProfile();
+          scheduleBackup('cleared-data', { immediate: true });
           currentTab = 'dashboard';
           alert("All data cleared!");
           render();
@@ -867,7 +1244,9 @@
                           await dbAddPractice(p);
                       }
                       await setProfile(importedData.profile);
-                      
+                      profile = await getProfile();
+                      scheduleBackup('imported-data', { immediate: true, userInitiated: true });
+
                       currentTab = 'dashboard';
                       alert("Data imported successfully! Rendering...");
                       render();
@@ -1009,6 +1388,7 @@
         };
         try {
           await dbUpdatePractice(updatedPractice);
+          scheduleBackup('story-updated');
           showPromptForPractice = false;
           promptCopyState = 'idle';
           promptCopyError = '';
