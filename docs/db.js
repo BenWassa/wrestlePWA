@@ -219,6 +219,14 @@ export function prepareProfileForExport(profile) {
     };
 }
 
+function preparePracticeForExport(practice) {
+    if (!practice || typeof practice !== 'object') {
+        return practice;
+    }
+    const { aiStory, ...rest } = practice;
+    return rest;
+}
+
 export async function exportAllData() {
     const [practices, profile] = await Promise.all([
         getPractices(),
@@ -226,7 +234,7 @@ export async function exportAllData() {
     ]);
 
     return {
-        practices,
+        practices: practices.map(preparePracticeForExport),
         profile: prepareProfileForExport(profile),
         exportDate: new Date().toISOString()
     };
