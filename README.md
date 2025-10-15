@@ -11,6 +11,16 @@ A free, offline-first Progressive Web App (PWA) for wrestlers to log practices, 
 - **AI Prompts**: Generate motivational prompts for training.
 - **Minimal Dependencies**: Pure web technologies, no frameworks.
 
+## Backup & Versioning Quick Reference
+
+- **Smart Backups**: Choose a folder once and the app writes debounced snapshots after data changes.
+  - Uses the File System Access API with permission validation and hashed payloads to avoid redundant writes.
+  - Maintains a rotating set of daily JSON files plus a `latest` snapshot; limits are configurable in the UI.
+  - Stores handles securely in IndexedDB and surfaces status, errors, and manual backup controls in Settings.
+- **Version Awareness**: `manifest.json`, the service worker, and the UI all read from a single `version` string.
+  - The service worker checks for updates in the background and shows an in-app banner prompting users to refresh.
+  - A persistent version badge appears in Settings so you know what build is running after an update.
+
 ## Best Practices for Minimal PWA
 
 This PWA follows best practices for minimal, personal-use applications:

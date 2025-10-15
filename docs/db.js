@@ -13,8 +13,12 @@ export const DEFAULT_BACKUP_SETTINGS = {
     lastBackup: null,
     lastBackupFileName: null,
     lastBackupBytes: null,
+    lastBackupHash: null,
+    lastBackupReason: null,
+    lastValidation: null,
     maxBackups: 5,
-    lastError: null
+    lastError: null,
+    needsPermission: false
 };
 
 export function normalizeBackupSettings(settings = {}) {

@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'v11';
-const CACHE_NAME = `wrestling-journey-${CACHE_VERSION}`;
+const APP_VERSION = '1.1.0';
+const CACHE_NAME = `wrestling-journey-${APP_VERSION}`;
 const OFFLINE_RESOURCES = [
   './',
   './index.html',
@@ -48,7 +48,7 @@ self.addEventListener('activate', event => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     clients.forEach(client => client.postMessage({
       type: 'SW_ACTIVATED',
-      version: CACHE_VERSION
+      version: APP_VERSION
     }));
   })());
 });

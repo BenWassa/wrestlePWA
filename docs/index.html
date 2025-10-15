@@ -68,10 +68,25 @@
       const textEncoder = new TextEncoder();
       const BACKUP_FILE_PREFIX = 'wrestling_journey_backup';
       const BACKUP_FILE_EXTENSION = '.json';
+      const BACKUP_AUTO_DELAY_MS = 4000;
+      const BACKUP_MAX_DAILY_FILES = 14;
+      const BACKUP_SNAPSHOT_ENTRY_LIMIT = 120;
+      const BACKUP_LATEST_FILE = `${BACKUP_FILE_PREFIX}-latest${BACKUP_FILE_EXTENSION}`;
+      const BACKUP_DAILY_PREFIX = `${BACKUP_FILE_PREFIX}-daily-`;
+      const BACKUP_METADATA_VERSION = 2;
       let backupTimeoutId = null;
       let backupInProgress = false;
       let queuedBackupReason = null;
       let queuedBackupUserInitiated = false;
+      let scheduledValidationId = null;
+      let hasValidatedBackup = false;
+      let lastValidationRequestId = 0;
+      let appVersion = '';
+      let manifestVersionPromise = null;
+      let serviceWorkerRegistration = null;
+      let pendingUpdateWorker = null;
+      let updateBannerTimeoutId = null;
+      let hasReloadedForUpdate = false;
 
       // --- RENDER FUNCTION ---
       async function render() {
@@ -81,6 +96,10 @@
           ...profile,
           backupSettings: normalizeBackupSettings(profile.backupSettings)
         };
+
+        if (profile.backupSettings.enabled && profile.backupSettings.directoryHandle) {
+          scheduleBackupValidation();
+        }
 
         if (selectedPracticeId && !practices.some(p => p.id === selectedPracticeId)) {
           selectedPracticeId = null;
@@ -165,6 +184,7 @@
           )
         );
         const backupSectionMarkup = renderBackupSettingsSection();
+        const versionMarkup = renderAppVersionMarkup();
         const practiceDetailMarkup = selectedPractice
           ? `
             <div class="practice-detail">
@@ -646,6 +666,7 @@
                     <p class="panel-subtitle">Your data stays on-device. Export for backups, clear when needed.</p>
                   </div>
                   ${backupSectionMarkup}
+                  ${versionMarkup}
                   <div class="settings-actions">
                     <button id="export-btn" class="button secondary">Export JSON</button>
                     <button id="clear-btn" class="button danger">Clear all data</button>
@@ -797,15 +818,32 @@
         if (!settings.enabled || !settings.directoryHandle) {
           lines.push('<span class="status-pill inactive">Inactive</span>');
           lines.push('<p>Automatic backups are off. Choose a folder to start protecting your journey.</p>');
+        } else if (settings.needsPermission) {
+          lines.push('<span class="status-pill warning">Reconnect</span>');
+          lines.push('<p>We lost access to the backup folder. Choose it again to resume automatic saves.</p>');
         } else {
           const lastBackup = settings.lastBackup ? new Date(settings.lastBackup) : null;
-          const lastBackupText = lastBackup ? `Last backup ${formatRelativeTime(lastBackup)} (${lastBackup.toLocaleString()}).` : 'No backups yet. One will run shortly.';
-          const keepCount = Number.isFinite(settings.maxBackups) ? settings.maxBackups : DEFAULT_BACKUP_SETTINGS.maxBackups;
+          const lastBackupText = lastBackup
+            ? `Last backup ${formatRelativeTime(lastBackup)} (${lastBackup.toLocaleString()}).`
+            : 'No backups yet. One will run shortly.';
+          const keepCount = Number.isFinite(settings.maxBackups) ? settings.maxBackups : BACKUP_MAX_DAILY_FILES;
           const sizeText = typeof settings.lastBackupBytes === 'number' ? `Latest file ${formatBytes(settings.lastBackupBytes)}.` : '';
           lines.push('<span class="status-pill active">Enabled</span>');
-          lines.push(`<p>Keeping up to ${keepCount} recent backups in your chosen folder. ${lastBackupText}</p>`);
+          lines.push(`<p>Keeping up to ${keepCount} daily snapshots in your chosen folder. ${lastBackupText}</p>`);
           if (sizeText) {
             lines.push(`<p>${sizeText}</p>`);
+          }
+          if (settings.lastBackupReason) {
+            lines.push(`<p>Last trigger: ${escapeHTML(settings.lastBackupReason)}</p>`);
+          }
+          if (settings.lastBackupHash) {
+            lines.push(`<p class="backup-hash">Hash ${escapeHTML(settings.lastBackupHash.slice(0, 16))}…</p>`);
+          }
+          if (settings.lastValidation) {
+            const validationDate = new Date(settings.lastValidation);
+            if (!Number.isNaN(validationDate.valueOf())) {
+              lines.push(`<p class="backup-validation">Folder validated ${formatRelativeTime(validationDate)}.</p>`);
+            }
           }
           if (backupInProgress) {
             lines.push('<p class="backup-running">Backup in progress…</p>');
@@ -821,16 +859,26 @@
         if (!isBackupSupported()) {
           return '';
         }
-        const supportsBackups = settings.enabled && !!settings.directoryHandle;
-        const chooseLabel = supportsBackups ? 'Change backup folder' : 'Choose backup folder';
-        const backupNowButton = supportsBackups
+        const canWrite = settings.enabled && !!settings.directoryHandle && !settings.needsPermission;
+        const chooseLabel = canWrite ? 'Change backup folder' : (settings.enabled ? 'Reconnect backup folder' : 'Choose backup folder');
+        const backupNowButton = canWrite
           ? `<button id="backup-now-btn" class="button secondary" ${backupInProgress ? 'disabled' : ''}>${backupInProgress ? 'Backing up…' : 'Backup now'}</button>`
           : '<button id="backup-now-btn" class="button secondary" disabled>Backup now</button>';
         const changeButton = `<button id="choose-backup-folder-btn" class="button ghost">${chooseLabel}</button>`;
-        const disableButton = supportsBackups
+        const disableButton = settings.enabled
           ? '<button id="disable-backup-btn" class="button ghost danger">Disable backups</button>'
           : '';
         return `${backupNowButton}${changeButton}${disableButton}`;
+      }
+
+      function renderAppVersionMarkup() {
+        const displayVersion = appVersion || '—';
+        return `
+          <div class="settings-version">
+            <div class="settings-version-label">App version</div>
+            <div class="settings-version-value" id="app-version">${escapeHTML(displayVersion)}</div>
+          </div>
+        `;
       }
 
       function isBackupSupported() {
@@ -838,7 +886,8 @@
       }
 
       function isBackupEnabled() {
-        return Boolean(profile?.backupSettings?.enabled && profile.backupSettings.directoryHandle);
+        const settings = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : null;
+        return Boolean(settings?.enabled && settings.directoryHandle);
       }
 
       function formatBytes(bytes) {
@@ -884,7 +933,7 @@
         }
         try {
           const directoryHandle = await window.showDirectoryPicker();
-          const permission = await ensureDirectoryPermission(directoryHandle);
+          const permission = await ensureDirectoryPermission(directoryHandle, { request: true });
           if (permission !== 'granted') {
             alert('We need write access to save backups. Please try again and allow access.');
             return;
@@ -892,8 +941,10 @@
           await updateBackupSettings({
             enabled: true,
             directoryHandle,
-            lastError: null
+            lastError: null,
+            needsPermission: false
           });
+          scheduleBackupValidation({ immediate: true, force: true });
           scheduleBackup('folder-selected', { immediate: true, userInitiated: true });
         } catch (error) {
           if (error?.name === 'AbortError') {
@@ -911,11 +962,19 @@
         if (!confirm('Disable automatic backups? You can always turn them back on later.')) {
           return;
         }
+        if (backupTimeoutId) {
+          clearTimeout(backupTimeoutId);
+          backupTimeoutId = null;
+        }
+        queuedBackupReason = null;
+        queuedBackupUserInitiated = false;
         await updateBackupSettings({
           enabled: false,
           directoryHandle: null,
-          lastError: null
+          lastError: null,
+          needsPermission: false
         });
+        hasValidatedBackup = false;
       }
 
       async function handleManualBackup() {
@@ -923,23 +982,22 @@
           alert('Choose a backup folder first.');
           return;
         }
+        scheduleBackupValidation({ immediate: true });
         scheduleBackup('manual', { immediate: true, userInitiated: true });
       }
 
-      async function ensureDirectoryPermission(directoryHandle) {
+      async function ensureDirectoryPermission(directoryHandle, { mode = 'readwrite', request = true } = {}) {
         if (!directoryHandle) {
           return 'denied';
         }
         if (!directoryHandle.queryPermission || !directoryHandle.requestPermission) {
           return 'granted';
         }
-        let permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
-        if (permission === 'granted') {
-          return 'granted';
+        let permission = await directoryHandle.queryPermission({ mode });
+        if (permission === 'granted' || !request) {
+          return permission;
         }
-        if (permission === 'prompt') {
-          permission = await directoryHandle.requestPermission({ mode: 'readwrite' });
-        }
+        permission = await directoryHandle.requestPermission({ mode });
         return permission;
       }
 
@@ -958,7 +1016,7 @@
         backupTimeoutId = setTimeout(() => {
           backupTimeoutId = null;
           runBackup(reason, { userInitiated });
-        }, 1500);
+        }, BACKUP_AUTO_DELAY_MS);
       }
 
       async function runBackup(reason, { userInitiated = false } = {}) {
@@ -973,16 +1031,35 @@
         backupInProgress = true;
         render();
         try {
-          const result = await performBackup(reason);
-          if (result) {
+          const result = await performBackup(reason, { userInitiated });
+          if (!result) {
+            return;
+          }
+          if (result.skipped) {
+            hasValidatedBackup = true;
             await updateBackupSettings({
-              lastBackup: result.timestamp,
-              lastBackupFileName: result.fileName,
-              lastBackupBytes: result.bytes,
+              lastBackupHash: result.hash,
+              lastValidation: new Date().toISOString(),
               lastError: null
             }, { silent: true });
+            if (userInitiated) {
+              alert('Your backup is already up to date.');
+            }
             render();
+            return;
           }
+          await updateBackupSettings({
+            lastBackup: result.timestamp,
+            lastBackupFileName: result.fileName,
+            lastBackupBytes: result.bytes,
+            lastBackupHash: result.hash,
+            lastBackupReason: reason,
+            lastValidation: new Date().toISOString(),
+            needsPermission: false,
+            lastError: null
+          }, { silent: true });
+          hasValidatedBackup = true;
+          render();
         } catch (error) {
           console.error('Backup failed', error);
           const message = error?.message || 'Automatic backup failed. Please choose the folder again.';
@@ -991,8 +1068,7 @@
             lastError: message
           };
           if (permissionDenied) {
-            updates.enabled = false;
-            updates.directoryHandle = null;
+            updates.needsPermission = true;
           }
           await updateBackupSettings(updates, { silent: true });
           if (userInitiated) {
@@ -1011,58 +1087,80 @@
         }
       }
 
-      async function performBackup(reason) {
-        const settings = profile?.backupSettings;
+      async function performBackup(reason, { userInitiated = false } = {}) {
+        const settings = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : { ...DEFAULT_BACKUP_SETTINGS };
         if (!settings?.directoryHandle) {
           throw new Error('Backup folder is missing. Choose a folder to continue.');
         }
-        const permission = await ensureDirectoryPermission(settings.directoryHandle);
+        const permission = await ensureDirectoryPermission(settings.directoryHandle, { request: true });
         if (permission !== 'granted') {
           throw new Error('Permission to write to the backup folder was denied.');
         }
-        const snapshot = await exportAllData();
-        const nowIso = new Date().toISOString();
-        const safeTimestamp = nowIso.replace(/[:]/g, '-');
-        const fileName = `${BACKUP_FILE_PREFIX}-${safeTimestamp}${BACKUP_FILE_EXTENSION}`;
-        const payload = {
-          ...snapshot,
-          backup: {
-            generatedAt: nowIso,
-            reason,
-            version: 1
-          }
-        };
+        const payload = await buildBackupPayload(reason);
         const json = JSON.stringify(payload, null, 2);
         const buffer = textEncoder.encode(json);
-        const fileHandle = await settings.directoryHandle.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(buffer);
-        await writable.close();
-        await pruneOldBackups(settings.directoryHandle, settings.maxBackups || DEFAULT_BACKUP_SETTINGS.maxBackups, fileName);
+        const hash = await computeSHA256Hex(buffer);
+        if (hash && settings.lastBackupHash === hash) {
+          return { skipped: true, hash, timestamp: settings.lastBackup || payload.backup.generatedAt };
+        }
+        await writeBackupFile(settings.directoryHandle, BACKUP_LATEST_FILE, buffer);
+        const dailyFileName = `${BACKUP_DAILY_PREFIX}${payload.backup.generatedAt.slice(0, 10)}${BACKUP_FILE_EXTENSION}`;
+        await writeBackupFile(settings.directoryHandle, dailyFileName, buffer);
+        await pruneOldBackups(settings.directoryHandle, settings.maxBackups || BACKUP_MAX_DAILY_FILES);
         return {
-          fileName,
+          fileName: BACKUP_LATEST_FILE,
+          dailyFileName,
           bytes: buffer.byteLength,
-          timestamp: nowIso
+          timestamp: payload.backup.generatedAt,
+          hash
         };
       }
 
-      async function pruneOldBackups(directoryHandle, maxBackups, latestFileName) {
-        if (!directoryHandle || !maxBackups || maxBackups < 1) {
+      async function buildBackupPayload(reason) {
+        const snapshot = await exportAllData();
+        const nowIso = new Date().toISOString();
+        const practices = Array.isArray(snapshot.practices)
+          ? snapshot.practices.slice(-BACKUP_SNAPSHOT_ENTRY_LIMIT)
+          : [];
+        const totalPractices = Array.isArray(snapshot.practices) ? snapshot.practices.length : 0;
+        return {
+          ...snapshot,
+          practices,
+          backup: {
+            generatedAt: nowIso,
+            reason,
+            version: BACKUP_METADATA_VERSION,
+            totalPractices,
+            includedPractices: practices.length,
+            appVersion: appVersion || null
+          }
+        };
+      }
+
+      async function writeBackupFile(directoryHandle, fileName, buffer) {
+        const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(buffer);
+        await writable.close();
+      }
+
+      async function pruneOldBackups(directoryHandle, maxDailyBackups) {
+        if (!directoryHandle) {
           return;
         }
-        const backups = [];
+        const limit = Number.isFinite(maxDailyBackups) && maxDailyBackups > 0 ? maxDailyBackups : BACKUP_MAX_DAILY_FILES;
+        const dailyBackups = [];
         try {
           for await (const [name, handle] of directoryHandle.entries()) {
-            if (!name.endsWith(BACKUP_FILE_EXTENSION) || !name.startsWith(BACKUP_FILE_PREFIX)) {
+            if (name === BACKUP_LATEST_FILE) {
               continue;
             }
-            if (name === latestFileName) {
-              backups.push({ name, handle, lastModified: Date.now() });
+            if (!name.startsWith(BACKUP_DAILY_PREFIX) || !name.endsWith(BACKUP_FILE_EXTENSION)) {
               continue;
             }
             try {
               const file = await handle.getFile();
-              backups.push({ name, handle, lastModified: file.lastModified });
+              dailyBackups.push({ name, handle, lastModified: file.lastModified });
             } catch (error) {
               console.warn('Unable to inspect backup file', name, error);
             }
@@ -1071,9 +1169,9 @@
           console.warn('Unable to enumerate backup directory', error);
           return;
         }
-        backups.sort((a, b) => a.lastModified - b.lastModified);
-        while (backups.length > maxBackups) {
-          const oldest = backups.shift();
+        dailyBackups.sort((a, b) => a.lastModified - b.lastModified);
+        while (dailyBackups.length > limit) {
+          const oldest = dailyBackups.shift();
           try {
             await directoryHandle.removeEntry(oldest.name);
           } catch (error) {
@@ -1083,12 +1181,104 @@
         }
       }
 
+      async function computeSHA256Hex(buffer) {
+        if (!window.crypto?.subtle) {
+          return null;
+        }
+        try {
+          const digest = await crypto.subtle.digest('SHA-256', buffer);
+          const view = new Uint8Array(digest);
+          return Array.from(view).map(byte => byte.toString(16).padStart(2, '0')).join('');
+        } catch (error) {
+          console.warn('Unable to compute backup hash', error);
+          return null;
+        }
+      }
+
+      function scheduleBackupValidation({ immediate = false, force = false } = {}) {
+        if (force) {
+          hasValidatedBackup = false;
+        }
+        if (!isBackupEnabled()) {
+          if (scheduledValidationId) {
+            clearTimeout(scheduledValidationId);
+            scheduledValidationId = null;
+          }
+          return;
+        }
+        if (hasValidatedBackup && !force) {
+          return;
+        }
+        if (scheduledValidationId) {
+          clearTimeout(scheduledValidationId);
+          scheduledValidationId = null;
+        }
+        const run = () => {
+          scheduledValidationId = null;
+          validateExistingBackup();
+        };
+        if (immediate) {
+          run();
+        } else {
+          scheduledValidationId = setTimeout(run, 500);
+        }
+      }
+
+      async function validateExistingBackup() {
+        const settings = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : { ...DEFAULT_BACKUP_SETTINGS };
+        if (!settings.enabled || !settings.directoryHandle) {
+          hasValidatedBackup = false;
+          return;
+        }
+        const validationId = ++lastValidationRequestId;
+        try {
+          const permission = await ensureDirectoryPermission(settings.directoryHandle, { request: false });
+          if (validationId !== lastValidationRequestId) {
+            return;
+          }
+          if (permission !== 'granted') {
+            await updateBackupSettings({
+              needsPermission: true,
+              lastError: 'We need permission to write to your backup folder. Choose it again to continue automatic backups.'
+            }, { silent: true });
+            render();
+            return;
+          }
+          hasValidatedBackup = true;
+          const nextUpdates = {
+            needsPermission: false,
+            lastValidation: new Date().toISOString()
+          };
+          if (settings.lastError && /permission/i.test(settings.lastError)) {
+            nextUpdates.lastError = null;
+          }
+          await updateBackupSettings(nextUpdates, { silent: true });
+          render();
+        } catch (error) {
+          console.warn('Backup validation failed', error);
+          await updateBackupSettings({
+            lastError: 'Could not validate the backup folder. Reconnect it to continue automatic backups.'
+          }, { silent: true });
+          render();
+        }
+      }
+
       async function updateBackupSettings(updates, { silent = false } = {}) {
         const current = profile?.backupSettings ? normalizeBackupSettings(profile.backupSettings) : { ...DEFAULT_BACKUP_SETTINGS };
         const merged = {
           ...current,
           ...updates
         };
+        if (!merged.enabled) {
+          merged.needsPermission = false;
+        }
+        const hasChanges = Object.keys(merged).some(key => current[key] !== merged[key]);
+        if (!hasChanges) {
+          if (!silent) {
+            render();
+          }
+          return;
+        }
         profile = {
           ...profile,
           backupSettings: merged
@@ -1504,73 +1694,134 @@ Format: Start with a bold title like "Practice #${practiceNumber}: [Your Title]"
       }
       
       function handleGeneratePrompt() {
-          // This function is no longer needed as the prompt is generated on render, 
+          // This function is no longer needed as the prompt is generated on render,
           // but if we were to move the Motivate section to its own screen, it would be used here.
       }
 
+      async function loadAppVersion() {
+        try {
+          if (!manifestVersionPromise) {
+            manifestVersionPromise = fetch('manifest.json', { cache: 'no-cache' })
+              .then(response => (response.ok ? response.json() : {}))
+              .catch(() => ({}));
+          }
+          const manifest = await manifestVersionPromise;
+          const version = manifest?.version || '';
+          if (version && version !== appVersion) {
+            appVersion = version;
+            render();
+          }
+        } catch (error) {
+          console.warn('Unable to load app version', error);
+        }
+      }
+
+      function showUpdateNotification() {
+        if (document.getElementById('update-banner')) {
+          return;
+        }
+        const banner = document.createElement('div');
+        banner.id = 'update-banner';
+        banner.className = 'update-banner';
+        banner.innerHTML = `
+          <div class="update-banner-message">
+            <strong>Update available</strong>
+            <p>A new version of Wrestling Journey is ready. Refresh to get the latest improvements.</p>
+          </div>
+          <div class="update-banner-actions">
+            <button id="update-refresh-btn" class="button secondary">Refresh now</button>
+            <button id="update-dismiss-btn" class="button ghost">Later</button>
+          </div>
+        `;
+        document.body.appendChild(banner);
+        document.getElementById('update-refresh-btn').addEventListener('click', reloadForUpdate);
+        document.getElementById('update-dismiss-btn').addEventListener('click', dismissUpdateNotification);
+        if (updateBannerTimeoutId) {
+          clearTimeout(updateBannerTimeoutId);
+        }
+        updateBannerTimeoutId = setTimeout(() => {
+          reloadForUpdate();
+        }, 30000);
+      }
+
+      function dismissUpdateNotification() {
+        if (updateBannerTimeoutId) {
+          clearTimeout(updateBannerTimeoutId);
+          updateBannerTimeoutId = null;
+        }
+        const banner = document.getElementById('update-banner');
+        if (banner && banner.parentNode) {
+          banner.parentNode.removeChild(banner);
+        }
+      }
+
+      function reloadForUpdate() {
+        if (updateBannerTimeoutId) {
+          clearTimeout(updateBannerTimeoutId);
+          updateBannerTimeoutId = null;
+        }
+        if (pendingUpdateWorker) {
+          pendingUpdateWorker.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+          window.location.reload();
+        }
+      }
+
+      async function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+        try {
+          const registration = await navigator.serviceWorker.register('./service-worker.js');
+          serviceWorkerRegistration = registration;
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            pendingUpdateWorker = registration.waiting;
+            showUpdateNotification();
+          }
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) {
+              return;
+            }
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                pendingUpdateWorker = newWorker;
+                showUpdateNotification();
+              }
+            });
+          });
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hasReloadedForUpdate) {
+              return;
+            }
+            hasReloadedForUpdate = true;
+            window.location.reload();
+          });
+          navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.type === 'SW_ACTIVATED') {
+              console.log(`Service worker activated with version ${event.data.version}`);
+              pendingUpdateWorker = null;
+              dismissUpdateNotification();
+              hasReloadedForUpdate = false;
+              loadAppVersion();
+            }
+          });
+          if ('visibilityState' in document) {
+            setInterval(() => {
+              if (document.visibilityState === 'visible') {
+                registration.update();
+              }
+            }, 5 * 60 * 1000);
+          }
+        } catch (error) {
+          console.warn('Service worker registration failed', error);
+        }
+      }
+
+      loadAppVersion();
+      registerServiceWorker();
       render();
     });
-  </script>
-
-  <!-- Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        let refreshing = false;
-
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (refreshing) {
-            return;
-          }
-          refreshing = true;
-          window.location.reload();
-        });
-
-        navigator.serviceWorker.register('./service-worker.js')
-          .then(registration => {
-            console.log('Service Worker registered:', registration);
-
-            const requestSkipWaiting = (worker) => {
-              if (!worker || !navigator.serviceWorker.controller) {
-                return;
-              }
-              worker.postMessage({ type: 'SKIP_WAITING' });
-            };
-
-            const trackInstalling = (worker) => {
-              if (!worker) {
-                return;
-              }
-              worker.addEventListener('statechange', () => {
-                if (worker.state === 'installed') {
-                  requestSkipWaiting(worker);
-                }
-              });
-            };
-
-            if (registration.waiting) {
-              requestSkipWaiting(registration.waiting);
-            }
-
-            if (registration.installing) {
-              trackInstalling(registration.installing);
-            }
-
-            registration.addEventListener('updatefound', () => {
-              trackInstalling(registration.installing);
-            });
-          })
-          .catch(error => {
-            console.log('Service Worker registration failed:', error);
-          });
-
-        navigator.serviceWorker.addEventListener('message', event => {
-          if (event.data && event.data.type === 'SW_ACTIVATED') {
-            console.log(`Service Worker activated with version ${event.data.version}`);
-          }
-        });
-      });
-    }
   </script>
 
   <!-- Confirmation Modal -->
