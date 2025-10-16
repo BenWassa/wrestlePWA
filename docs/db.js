@@ -5,6 +5,8 @@ const DB_VERSION = 3; // Incremented for backup settings additions
 const STORE_PRACTICES = 'practices';
 const STORE_PROFILE = 'profile'; // New store for global settings/badges
 
+const LEGACY_MAX_BACKUPS_LIMIT = 5;
+
 let db;
 
 export const DEFAULT_BACKUP_SETTINGS = {
@@ -16,16 +18,28 @@ export const DEFAULT_BACKUP_SETTINGS = {
     lastBackupHash: null,
     lastBackupReason: null,
     lastValidation: null,
-    maxBackups: 5,
+    maxBackups: null,
     lastError: null,
     needsPermission: false
 };
 
 export function normalizeBackupSettings(settings = {}) {
-    return {
+    const merged = {
         ...DEFAULT_BACKUP_SETTINGS,
         ...settings
     };
+
+    if (Number.isFinite(merged.maxBackups)) {
+        if (merged.maxBackups <= 0 || merged.maxBackups === LEGACY_MAX_BACKUPS_LIMIT) {
+            merged.maxBackups = null;
+        } else {
+            merged.maxBackups = Math.floor(merged.maxBackups);
+        }
+    } else {
+        merged.maxBackups = null;
+    }
+
+    return merged;
 }
 
 function createDefaultProfile() {
@@ -219,6 +233,14 @@ export function prepareProfileForExport(profile) {
     };
 }
 
+function preparePracticeForExport(practice) {
+    if (!practice || typeof practice !== 'object') {
+        return practice;
+    }
+    const { aiStory, ...rest } = practice;
+    return rest;
+}
+
 export async function exportAllData() {
     const [practices, profile] = await Promise.all([
         getPractices(),
@@ -226,7 +248,7 @@ export async function exportAllData() {
     ]);
 
     return {
-        practices,
+        practices: practices.map(preparePracticeForExport),
         profile: prepareProfileForExport(profile),
         exportDate: new Date().toISOString()
     };

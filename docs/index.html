@@ -69,7 +69,6 @@
       const BACKUP_FILE_PREFIX = 'wrestling_journey_backup';
       const BACKUP_FILE_EXTENSION = '.json';
       const BACKUP_AUTO_DELAY_MS = 4000;
-      const BACKUP_MAX_DAILY_FILES = 14;
       const BACKUP_SNAPSHOT_ENTRY_LIMIT = 120;
       const BACKUP_LATEST_FILE = `${BACKUP_FILE_PREFIX}-latest${BACKUP_FILE_EXTENSION}`;
       const BACKUP_DAILY_PREFIX = `${BACKUP_FILE_PREFIX}-daily-`;
@@ -801,7 +800,7 @@
           <section class="settings-backup">
             <div class="settings-backup-header">
               <h3>Smart backups</h3>
-              <p>Pick a folder once—fresh snapshots stay on your device with a rolling history.</p>
+              <p>Pick a folder once—fresh snapshots stay on your device with your full history.</p>
             </div>
             <div class="backup-status">
               ${statusMarkup}
@@ -826,10 +825,13 @@
           const lastBackupText = lastBackup
             ? `Last backup ${formatRelativeTime(lastBackup)} (${lastBackup.toLocaleString()}).`
             : 'No backups yet. One will run shortly.';
-          const keepCount = Number.isFinite(settings.maxBackups) ? settings.maxBackups : BACKUP_MAX_DAILY_FILES;
+          const keepCount = Number.isFinite(settings.maxBackups) && settings.maxBackups > 0 ? settings.maxBackups : null;
+          const retentionText = keepCount
+            ? `Keeping up to ${keepCount} daily snapshot${keepCount === 1 ? '' : 's'} in your chosen folder.`
+            : 'Keeping every daily snapshot in your chosen folder.';
           const sizeText = typeof settings.lastBackupBytes === 'number' ? `Latest file ${formatBytes(settings.lastBackupBytes)}.` : '';
           lines.push('<span class="status-pill active">Enabled</span>');
-          lines.push(`<p>Keeping up to ${keepCount} daily snapshots in your chosen folder. ${lastBackupText}</p>`);
+          lines.push(`<p>${retentionText} ${lastBackupText}</p>`);
           if (sizeText) {
             lines.push(`<p>${sizeText}</p>`);
           }
@@ -1106,7 +1108,7 @@
         await writeBackupFile(settings.directoryHandle, BACKUP_LATEST_FILE, buffer);
         const dailyFileName = `${BACKUP_DAILY_PREFIX}${payload.backup.generatedAt.slice(0, 10)}${BACKUP_FILE_EXTENSION}`;
         await writeBackupFile(settings.directoryHandle, dailyFileName, buffer);
-        await pruneOldBackups(settings.directoryHandle, settings.maxBackups || BACKUP_MAX_DAILY_FILES);
+        await pruneOldBackups(settings.directoryHandle, settings.maxBackups);
         return {
           fileName: BACKUP_LATEST_FILE,
           dailyFileName,
@@ -1148,7 +1150,10 @@
         if (!directoryHandle) {
           return;
         }
-        const limit = Number.isFinite(maxDailyBackups) && maxDailyBackups > 0 ? maxDailyBackups : BACKUP_MAX_DAILY_FILES;
+        if (!Number.isFinite(maxDailyBackups) || maxDailyBackups <= 0) {
+          return;
+        }
+        const limit = Math.floor(maxDailyBackups);
         const dailyBackups = [];
         try {
           for await (const [name, handle] of directoryHandle.entries()) {
