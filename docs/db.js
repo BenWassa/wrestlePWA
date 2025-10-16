@@ -5,41 +5,19 @@ const DB_VERSION = 3; // Incremented for backup settings additions
 const STORE_PRACTICES = 'practices';
 const STORE_PROFILE = 'profile'; // New store for global settings/badges
 
-const LEGACY_MAX_BACKUPS_LIMIT = 5;
-
 let db;
 
 export const DEFAULT_BACKUP_SETTINGS = {
-    enabled: false,
-    directoryHandle: null,
-    lastBackup: null,
-    lastBackupFileName: null,
-    lastBackupBytes: null,
-    lastBackupHash: null,
-    lastBackupReason: null,
-    lastValidation: null,
-    maxBackups: null,
-    lastError: null,
-    needsPermission: false
+    enabled: true,
+    lastManualDownload: null
 };
 
 export function normalizeBackupSettings(settings = {}) {
-    const merged = {
+    return {
         ...DEFAULT_BACKUP_SETTINGS,
-        ...settings
+        enabled: settings.enabled !== false,
+        lastManualDownload: settings.lastManualDownload || null
     };
-
-    if (Number.isFinite(merged.maxBackups)) {
-        if (merged.maxBackups <= 0 || merged.maxBackups === LEGACY_MAX_BACKUPS_LIMIT) {
-            merged.maxBackups = null;
-        } else {
-            merged.maxBackups = Math.floor(merged.maxBackups);
-        }
-    } else {
-        merged.maxBackups = null;
-    }
-
-    return merged;
 }
 
 function createDefaultProfile() {
@@ -217,10 +195,9 @@ function prepareBackupSettingsForExport(settings) {
     if (!settings) {
         return undefined;
     }
-    const { directoryHandle, ...rest } = settings;
     return {
-        ...rest,
-        hasDirectoryHandle: Boolean(directoryHandle)
+        enabled: settings.enabled !== false,
+        lastManualDownload: settings.lastManualDownload || null
     };
 }
 
