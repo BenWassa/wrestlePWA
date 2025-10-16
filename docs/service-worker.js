@@ -1,4 +1,4 @@
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const CACHE_NAME = `wrestling-journey-${APP_VERSION}`;
 const OFFLINE_RESOURCES = [
   './',

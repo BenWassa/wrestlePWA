@@ -123,7 +123,7 @@ A personal wrestling training journal PWA that:
 - Export all data to JSON
 - Import JSON backup
 - Clear all data (with confirmation)
-- Automatic local folder backups (without AI story text)
+- Automatic local folder backups (without AI story text, unlimited daily snapshots)
 
 **What NOT:**
 - ❌ Cloud sync

@@ -2,7 +2,7 @@
   "name": "Wrestling Journey",
   "short_name": "Wrestling",
   "description": "Track your wrestling training journey",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "id": "wrestling-journey",
   "start_url": "./",
   "scope": "./",
