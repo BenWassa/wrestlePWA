@@ -1041,6 +1041,27 @@ input[type="range"]::-moz-range-thumb {
   gap: 0.5rem;
 }
 
+.backup-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.backup-version-buttons {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.backup-version-buttons .button.ghost {
+  align-items: flex-start;
+}
+
+.backup-version-buttons .button.ghost small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
 .settings-version {
   display: flex;
   align-items: center;
