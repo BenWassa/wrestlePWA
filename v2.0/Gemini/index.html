@@ -145,7 +145,7 @@
                             <option>Drilling</option>
                             <option>Live Wrestling</option>
                             <option>Conditioning</option>
-                            <option>Match/Competition</option>
+                            <option>Competition</option>
                         </select>
                     </div>
                     <div class="space-y-2">
@@ -269,7 +269,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Configuration ---
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -373,8 +373,8 @@
 
             // Attach Delete Listeners
             document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.target.closest('button').dataset.id;
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.id;
                     deleteSession(id);
                 });
             });
@@ -490,6 +490,11 @@
                     },
                     (error) => console.error("Snapshot error:", error)
                 );
+            } else {
+                currentUser = null;
+                sessions = [];
+                renderApp();
+                document.getElementById('loading-screen').classList.add('hidden');
             }
         });
 
