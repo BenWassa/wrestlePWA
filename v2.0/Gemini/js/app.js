@@ -1,6 +1,6 @@
 import { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from './firebase.js';
 import { watchSessions } from './storage.js';
-import { initUI, renderApp, state } from './ui.js';
+import { initUI, renderApp, state } from './ui-clean.js';
 
 // Init UI event listeners
 initUI();
