@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MatMind – Wrestling Journal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#050816" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1 class="app-title">MatMind</h1>
+      <p class="app-subtitle">Second brain for the mat</p>
+    </div>
+    <button id="installBtn" class="pill-button hidden">Install</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-button active" data-tab="journey">Journey</button>
+    <button class="tab-button" data-tab="log">Log</button>
+    <button class="tab-button" data-tab="review">Review</button>
+  </nav>
+
+  <main class="app-main">
+    <!-- Journey tab -->
+    <section id="journey" class="tab-panel active">
+      <section class="grid-2">
+        <article class="card">
+          <h2 class="card-title">Big picture</h2>
+          <p id="journeyStage" class="journey-stage"></p>
+          <div class="metric-row">
+            <div class="metric">
+              <span class="metric-label">Sessions logged</span>
+              <span id="totalSessions" class="metric-value">0</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Time on mat</span>
+              <span id="totalMinutes" class="metric-value">0 min</span>
+            </div>
+          </div>
+          <div class="progress-wrapper">
+            <div class="progress-header">
+              <span>Season progress</span>
+              <span id="seasonProgressLabel" class="progress-label"></span>
+            </div>
+            <div class="progress-bar">
+              <div id="seasonProgressFill" class="progress-fill"></div>
+            </div>
+          </div>
+          <p class="card-note">
+            This is not a grade. It is a snapshot of how consistently you are showing up.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">This week</h2>
+          <p id="weekSummary" class="week-summary"></p>
+          <ul id="weekSessions" class="simple-list"></ul>
+        </article>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Recent sessions</h2>
+        <ul id="recentSessions" class="log-list"></ul>
+        <p id="noSessionsMessage" class="empty-state hidden">
+          You have not logged anything yet. Hit the Log tab after your next practice.
+        </p>
+      </section>
+    </section>
+
+    <!-- Log tab -->
+    <section id="log" class="tab-panel">
+      <section class="card">
+        <h2 class="card-title">Quick log</h2>
+        <form id="logForm" class="log-form">
+          <div class="form-row">
+            <label>
+              Date
+              <input type="date" id="logDate" required />
+            </label>
+            <label>
+              Duration (min)
+              <input type="number" id="logDuration" min="10" max="240" step="5" required />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>
+              Session type
+              <select id="logType">
+                <option value="practice">Practice</option>
+                <option value="live">Live goes</option>
+                <option value="tournament">Tournament</option>
+                <option value="drilling">Drilling</option>
+                <option value="conditioning">Conditioning</option>
+              </select>
+            </label>
+            <label>
+              Focus
+              <select id="logFocus">
+                <option value="neutral">Neutral</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+                <option value="scrambles">Scrambles</option>
+                <option value="defense">Defense</option>
+                <option value="mindset">Mindset</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>
+              Physical (1 tired – 5 sharp)
+              <input type="range" id="logPhysical" min="1" max="5" value="3" />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>
+              Mental (1 foggy – 5 locked in)
+              <input type="range" id="logMental" min="1" max="5" value="3" />
+            </label>
+          </div>
+
+          <label class="wide-label">
+            What stood out
+            <textarea id="logHighlights" rows="3" placeholder="Hits, mistakes, feelings, small wins"></textarea>
+          </label>
+
+          <label class="wide-label">
+            One lesson
+            <input id="logLesson" type="text" placeholder="If I repeated this session, I would..." />
+          </label>
+
+          <button type="submit" class="primary-button">Save session</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Last 5 logs</h2>
+        <ul id="recentLogs" class="log-list"></ul>
+      </section>
+    </section>
+
+    <!-- Review tab -->
+    <section id="review" class="tab-panel">
+      <section class="grid-2">
+        <article class="card">
+          <h2 class="card-title">Patterns</h2>
+          <ul id="patternSummary" class="simple-list"></ul>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Focus suggestions</h2>
+          <div id="focusSuggestions" class="suggestions"></div>
+        </article>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Your training story</h2>
+        <p id="storySummary" class="story-text"></p>
+        <button id="exportJsonBtn" class="secondary-button">Export raw log (JSON)</button>
+      </section>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span id="footerSessions">0 sessions logged</span>
+    <span class="footer-note">Offline first. Data stays on this device.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
