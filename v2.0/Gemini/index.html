@@ -77,9 +77,9 @@
             </div>
 
             <!-- Recent Activity Header -->
-            <div class="flex justify-between items-center mt-2">
+                <div class="flex justify-between items-center mt-2">
                 <h3 class="text-white font-bold text-lg">Recent Mat Time</h3>
-                <button onclick="switchView('journal')" class="text-amber-500 text-sm font-medium">View All</button>
+                <button class="nav-link text-amber-500 text-sm font-medium" data-target="journal">View All</button>
             </div>
             
             <div id="recent-list" class="space-y-3">
@@ -201,15 +201,15 @@
 
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 h-16 flex items-center justify-between max-w-md mx-auto px-4">
-        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-amber-500" data-target="dashboard" onclick="switchView('dashboard')">
+        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-amber-500" data-target="dashboard">
             <i data-lucide="home" class="w-5 h-5"></i>
             <span class="text-xs">Home</span>
         </button>
-        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-slate-500" data-target="journal" onclick="switchView('journal')">
+        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-slate-500" data-target="journal">
             <i data-lucide="book-open" class="w-5 h-5"></i>
             <span class="text-xs">Journal</span>
         </button>
-        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-slate-500" data-target="insights" onclick="switchView('insights')">
+        <button class="nav-btn group flex flex-col items-center justify-center w-full h-full text-slate-500" data-target="insights">
             <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
             <span class="text-xs">Insights</span>
         </button>
