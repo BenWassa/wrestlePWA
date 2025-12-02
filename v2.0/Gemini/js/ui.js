@@ -21,6 +21,9 @@ export function switchView(viewName) {
   document.getElementById('app-container').scrollTop = 0;
 }
 
+// Make switchView available globally for inline onclick attributes
+window.switchView = switchView;
+
 export function formatDate(ts) {
   if (!ts) return '';
   const date = ts.toDate ? ts.toDate() : new Date(ts);
@@ -144,10 +147,13 @@ export function updateInsights(weeklyHrs) {
 
 export function initUI(onSubmit) {
   // Nav buttons are inline, but ensure fab toggling
-  document.getElementById('fab').addEventListener('click', () => switchView('log'));
+  const fab = document.getElementById('fab');
+  if (fab) fab.addEventListener('click', () => switchView('log'));
+  else console.warn('FAB element not found (id="fab").');
 
   const logForm = document.getElementById('log-form');
-  logForm.addEventListener('submit', async (e) => {
+  if (logForm) {
+    logForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const uid = state.currentUser?.uid;
     if (!uid) return alert('You must be signed-in to log sessions');
@@ -179,13 +185,19 @@ export function initUI(onSubmit) {
       btn.innerHTML = originalText; btn.disabled = false;
     }
   });
+  }
 
-  document.getElementById('inp-intensity').addEventListener('input', (e) => {
+  const intensityInput = document.getElementById('inp-intensity');
+  if (intensityInput) {
+    intensityInput.addEventListener('input', (e) => {
     const val = e.target.value;
     const label = document.getElementById('val-intensity');
     label.innerText = `${val}/5`;
     label.className = `text-xs font-bold ${val <= 2 ? 'text-emerald-400' : val <= 4 ? 'text-amber-400' : 'text-red-500'}`;
-  });
+    });
+  } else {
+    console.warn('Intensity input not found (id="inp-intensity").');
+  }
 
   // Tab buttons are already inline `onclick`, but we can bind if needed
 }
