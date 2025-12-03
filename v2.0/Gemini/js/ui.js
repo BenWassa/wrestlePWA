@@ -1,4 +1,5 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb } from './storage.js';
+import { db } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [] };
 
@@ -86,6 +87,31 @@ export function initUI() {
   const intensityInput = document.getElementById('inp-intensity'); if (intensityInput) intensityInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-intensity'); if (label) { label.innerText = `${val}/10`; label.className = `text-xs font-bold ${val <= 3 ? 'text-emerald-400' : val <= 7 ? 'text-amber-400' : 'text-red-500'}`; } });
   const physicalInput = document.getElementById('inp-physical'); if (physicalInput) physicalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-physical'); if (label) label.innerText = `${val}/10`; });
   const mentalInput = document.getElementById('inp-mental'); if (mentalInput) mentalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-mental'); if (label) label.innerText = `${val}/10`; });
+
+  // Sync indicator: show network and Firestore persistence state
+  const indicator = document.getElementById('sync-indicator');
+  function updateSyncIndicator() {
+    if (!indicator) return;
+    const online = navigator.onLine;
+    if (!online) {
+      indicator.innerText = 'Offline — writes are queued';
+      indicator.className = 'fixed top-4 right-4 z-50 bg-yellow-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
+      return;
+    }
+    // online
+    if (typeof db !== 'undefined' && db) {
+      indicator.innerText = 'Online (Firestore + persistence)';
+      indicator.className = 'fixed top-4 right-4 z-50 bg-emerald-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
+    } else {
+      indicator.innerText = 'Online (Local only)';
+      indicator.className = 'fixed top-4 right-4 z-50 bg-slate-700/90 px-3 py-1 rounded-full text-xs text-slate-200 border border-slate-700';
+    }
+  }
+  // initial
+  updateSyncIndicator();
+  // update on change
+  window.addEventListener('online', updateSyncIndicator);
+  window.addEventListener('offline', updateSyncIndicator);
 }
 
 window._GeminiState = state;
