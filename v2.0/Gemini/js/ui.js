@@ -1,7 +1,7 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb } from './storage.js';
 import { db } from './firebase.js';
 
-export let state = { currentUser: null, sessions: [] };
+export let state = { currentUser: null, sessions: [], authError: null };
 
 export function switchView(viewName) {
   ['dashboard', 'log', 'journal', 'insights'].forEach(v => {
@@ -49,6 +49,12 @@ export function createSessionCard(s, isJournal) {
 }
 
 export function renderApp() {
+  // Show auth error banner if present
+  const authBanner = document.getElementById('auth-error-banner');
+  if (authBanner) {
+    if (state.authError) { authBanner.classList.remove('hidden'); authBanner.innerText = `Auth error: ${state.authError}. Your logs will be saved locally.`; }
+    else { authBanner.classList.add('hidden'); authBanner.innerText = ''; }
+  }
   const sessionsArr = (state.sessions || []).slice();
   sessionsArr.sort((a,b) => { const aDt = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date || 0); const bDt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date || 0); return bDt - aDt; });
   const totalMins = sessionsArr.reduce((acc,s) => acc + (s.duration || 0), 0); const totalHrs = totalMins / 60; const level = getLevel(totalHrs);

@@ -25,6 +25,13 @@ export async function init() {
     }
   } catch (err) {
     console.error('Auth Error', err);
+    // Set an auth error state visible to UI and continue in offline mode
+    state.authError = (err && err.message) ? err.message : 'Auth error';
+    state.currentUser = null;
+    state.sessions = [];
+    renderApp();
+    const ls = document.getElementById('loading-screen'); if (ls) ls.classList.add('hidden');
+    return; // avoid further wait on auth state change
   }
 
   onAuthStateChanged(auth, (user) => {
