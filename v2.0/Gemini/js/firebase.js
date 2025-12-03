@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Safe parse of firebase config
 let firebaseConfig = null;
@@ -24,4 +24,4 @@ if (firebaseConfig) {
 
 const appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
 
-export { app, auth, db, appId, serverTimestamp, signInAnonymously, signInWithCustomToken, onAuthStateChanged, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy };
+export { app, auth, db, appId, serverTimestamp, signInAnonymously, signInWithCustomToken, onAuthStateChanged, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, where };

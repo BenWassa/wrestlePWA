@@ -114,36 +114,38 @@
                 <div class="space-y-2">
                     <div class="flex justify-between">
                         <label class="text-slate-400 text-xs uppercase font-bold">Intensity (RPE)</label>
-                        <span id="val-intensity" class="text-xs font-bold text-amber-400">3/5</span>
+                        <span id="val-intensity" class="text-xs font-bold text-amber-400">5/10</span>
                     </div>
-                    <input id="inp-intensity" type="range" min="1" max="5" value="3" class="w-full">
+                    <input id="inp-intensity" type="range" min="1" max="10" value="5" class="w-full">
                     <div class="flex justify-between text-[10px] text-slate-500 px-1">
                         <span>Light</span>
                         <span>Grueling</span>
                     </div>
                 </div>
 
-                <!-- Wins -->
-                <div class="space-y-2">
-                    <label class="text-slate-400 text-xs uppercase font-bold flex items-center gap-2">
-                        <i data-lucide="trophy" class="w-3 h-3 text-amber-500"></i> Wins
-                    </label>
-                    <textarea id="inp-wins" placeholder="What went well?" class="w-full h-24 bg-slate-800 text-white p-3 rounded-xl border border-slate-700 focus:border-amber-500 outline-none resize-none"></textarea>
-                </div>
+                                <!-- Notes -->
+                                <div class="space-y-2">
+                                        <label class="text-slate-400 text-xs uppercase font-bold">Notes</label>
+                                        <textarea id="inp-notes" placeholder="What happened, what you learned, and any notes..." class="w-full h-24 bg-slate-800 text-white p-3 rounded-xl border border-slate-700 focus:border-amber-500 outline-none resize-none"></textarea>
+                                </div>
 
-                <!-- Fixes -->
-                <div class="space-y-2">
-                    <label class="text-slate-400 text-xs uppercase font-bold flex items-center gap-2">
-                        <i data-lucide="alert-circle" class="w-3 h-3 text-red-400"></i> Fixes
-                    </label>
-                    <textarea id="inp-fixes" placeholder="What needs work?" class="w-full h-24 bg-slate-800 text-white p-3 rounded-xl border border-slate-700 focus:border-amber-500 outline-none resize-none"></textarea>
-                </div>
-
-                <!-- Tags -->
-                <div class="space-y-2">
-                    <label class="text-slate-400 text-xs uppercase font-bold">Tags</label>
-                    <input id="inp-tags" type="text" placeholder="Single leg, Defense..." class="w-full bg-slate-800 text-white p-3 rounded-xl border border-slate-700 focus:border-amber-500 outline-none">
-                </div>
+                                <!-- Physical & Mental Feel -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <label class="text-slate-400 text-xs uppercase font-bold">Physical Feel</label>
+                                            <span id="val-physical" class="text-xs font-bold text-amber-400">5/10</span>
+                                        </div>
+                                        <input id="inp-physical" type="range" min="1" max="10" value="5" class="w-full">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <label class="text-slate-400 text-xs uppercase font-bold">Mental Feel</label>
+                                            <span id="val-mental" class="text-xs font-bold text-amber-400">7/10</span>
+                                        </div>
+                                        <input id="inp-mental" type="range" min="1" max="10" value="7" class="w-full">
+                                    </div>
+                                </div>
 
                 <button type="submit" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-amber-500/20">
                     <i data-lucide="save" class="w-5 h-5"></i> Log Session

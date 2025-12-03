@@ -24,23 +24,27 @@ export function getLevel(hours) { if (hours < 10) return { name: 'Rookie', color
 function escapeHTML(s) { if (!s) return ''; return s.replace(/[&<>"]'/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 export function createSessionCard(s, isJournal) {
-  const intensityColor = s.intensity >= 4 ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500';
-  const icon = s.intensity >= 4 ? 'activity' : 'dumbbell';
-  const tagsHtml = s.tags?.length ? `<div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-700/50">${s.tags.map(t => `<span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-1 rounded border border-slate-700">#${escapeHTML(t)}</span>`).join('')}</div>` : '';
+  const intensityColor = (s.intensity || 0) >= 8 ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500';
+  const icon = (s.intensity || 0) >= 8 ? 'activity' : 'dumbbell';
   const deleteBtn = isJournal ? `<button data-id="${s.id}" class="delete-btn absolute top-4 right-4 text-slate-600 hover:text-red-500 transition-colors p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
-  const content = isJournal ? `<div class="grid grid-cols-1 gap-2 mt-2">${s.wins ? `<div><h4 class="text-emerald-400 text-xs font-bold uppercase">Wins</h4><p class="text-slate-300 text-sm">${escapeHTML(s.wins)}</p></div>` : ''}${s.fixes ? `<div><h4 class="text-rose-400 text-xs font-bold uppercase">Fixes</h4><p class="text-slate-300 text-sm">${escapeHTML(s.fixes)}</p></div>` : ''}</div>` : `<div class="text-slate-400 text-sm truncate w-48">${escapeHTML(s.fixes || s.wins || 'No notes')}</div>`;
+  const notesHtml = s.notes ? `<div class="mt-2 text-slate-300 text-sm">${escapeHTML(s.notes)}</div>` : '';
+  const aiHtml = s.aiSummary ? `<div class="mt-2 text-slate-400 italic text-sm">AI: ${escapeHTML(s.aiSummary)}</div>` : '';
+  const feelHtml = `<div class="mt-2 text-xs text-slate-400">Physical: ${s.physicalFeel || '-'} • Mental: ${s.mentalFeel || '-'}</div>`;
+  const summary = isJournal ? `${notesHtml}` : `<div class="text-slate-400 text-sm truncate w-48">${escapeHTML(s.notes || 'No notes')}</div>`;
   return `
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 relative ${isJournal ? '' : 'bg-slate-800/50'}">
       ${deleteBtn}
       <div class="flex items-center gap-4 mb-2">
         <div class="w-10 h-10 rounded-full flex items-center justify-center ${intensityColor}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
         <div class="flex-1">
-          <div class="flex justify-between items-baseline pr-6"><span class="text-white font-semibold">${escapeHTML(s.type)}</span><span class="text-slate-500 text-xs">${formatDate(s.createdAt)}</span></div>
+          <div class="flex justify-between items-baseline pr-6"><span class="text-white font-semibold">${escapeHTML(s.sessionType || s.type || 'Session')}</span><span class="text-slate-500 text-xs">${formatDate(s.date || s.createdAt)}</span></div>
+          <div class="flex items-center gap-2 text-xs text-slate-400 mt-1"><span>${(s.duration || 0)}m</span><span>•</span><span>RPE ${s.intensity || '-'}/10</span></div>
           ${!isJournal ? content : ''}
         </div>
       </div>
       ${isJournal ? content : ''}
-      ${tagsHtml}
+      ${feelHtml}
+      ${aiHtml}
     </div>`;
 }
 
@@ -64,10 +68,10 @@ export function renderApp() {
 }
 
 export function updateInsights(weeklyHrs) {
-  const fixCounts = {}; state.sessions.forEach(s => { if (s.fixes) s.fixes.split(/[,\.\n]/).forEach(p => { const key = p.trim().toLowerCase(); if (key.length > 3) fixCounts[key] = (fixCounts[key] || 0) + 1; }); });
+  const fixCounts = {}; state.sessions.forEach(s => { if (s.notes) s.notes.split(/[,\.\n]/).forEach(p => { const key = p.trim().toLowerCase(); if (key.length > 3) fixCounts[key] = (fixCounts[key] || 0) + 1; }); });
   const topFixes = Object.entries(fixCounts).sort((a,b) => b[1]-a[1]).slice(0,3);
   const insightCountEl = document.getElementById('insight-count'); if (insightCountEl) insightCountEl.innerText = topFixes.length;
-  const container = document.getElementById('insights-content'); if (container) container.innerHTML = topFixes.length ? `<p class="text-indigo-100 text-sm mb-3">Pattern found in your "Fixes". Focus on these:</p><ul class="space-y-3">${topFixes.map(([t,c]) => `<li class="bg-indigo-950/50 p-3 rounded-lg flex justify-between items-center border border-indigo-500/20"><span class="text-indigo-200 font-medium capitalize">${escapeHTML(t)}</span><span class="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">Reported ${c}x</span></li>`).join('')}</ul>` : `<p class="text-indigo-200 text-sm italic">Log more "Fixes" to get technical feedback.</p>`;
+  const container = document.getElementById('insights-content'); if (container) container.innerHTML = topFixes.length ? `<p class="text-indigo-100 text-sm mb-3">Pattern found in your "Notes". Focus on these:</p><ul class="space-y-3">${topFixes.map(([t,c]) => `<li class="bg-indigo-950/50 p-3 rounded-lg flex justify-between items-center border border-indigo-500/20"><span class="text-indigo-200 font-medium capitalize">${escapeHTML(t)}</span><span class="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">Reported ${c}x</span></li>`).join('')}</ul>` : `<p class="text-indigo-200 text-sm italic">Add more notes to get better insights.</p>`;
   const avgEl = document.getElementById('avg-intensity'); if (avgEl) avgEl.innerText = `${(state.sessions.slice(0,5).reduce((a,c)=>a+(c.intensity||0),0) / Math.min(5, Math.max(1, state.sessions.length))).toFixed(1)} / 5`;
   const weeklyHoursEl = document.getElementById('weekly-hours'); if (weeklyHoursEl) weeklyHoursEl.innerText = `${weeklyHrs.toFixed(1)} hrs`;
   const msgEl = document.getElementById('volume-msg'); if (msgEl) { if (weeklyHrs > 5) msgEl.innerText = '🔥 High volume week! Prioritize recovery and sleep.'; else if (weeklyHrs > 0) msgEl.innerText = 'Consistency is key. Good work this week.'; else msgEl.innerText = 'Time to get back on the mat.'; }
@@ -79,8 +83,10 @@ export function initUI() {
   document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => { const target = btn.dataset.target; if (target) switchView(target); }));
   // Wire any nav links (e.g., 'View All') which use data-target attributes
   document.querySelectorAll('.nav-link').forEach(lnk => lnk.addEventListener('click', () => { const target = lnk.dataset.target; if (target) switchView(target); }));
-  const logForm = document.getElementById('log-form'); if (logForm) { logForm.addEventListener('submit', async e => { e.preventDefault(); const uid = state.currentUser?.uid; if (!uid) return alert('You must be signed-in to log sessions'); const btn = e.target.querySelector('button'); const original = btn.innerHTML; btn.innerText = 'Saving...'; btn.disabled = true; const newData = { createdAt: serverTimestamp(), date: new Date().toISOString(), duration: Number(document.getElementById('inp-duration').value), type: document.getElementById('inp-type').value, intensity: Number(document.getElementById('inp-intensity').value), wins: document.getElementById('inp-wins').value, fixes: document.getElementById('inp-fixes').value, tags: document.getElementById('inp-tags').value.split(',').map(t=>t.trim()).filter(t=>t) }; try { await addSessionToDb(uid, newData); e.target.reset(); const dur = document.getElementById('inp-duration'); if (dur) dur.value = 90; const val = document.getElementById('val-intensity'); if (val) val.innerText = '3/5'; switchView('dashboard'); } catch (err) { alert('Error saving session'); console.error(err); } finally { btn.innerHTML = original; btn.disabled = false; } }); }
-  const intensityInput = document.getElementById('inp-intensity'); if (intensityInput) intensityInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-intensity'); if (label) { label.innerText = `${val}/5`; label.className = `text-xs font-bold ${val <= 2 ? 'text-emerald-400' : val <= 4 ? 'text-amber-400' : 'text-red-500'}`; } });
+  const logForm = document.getElementById('log-form'); if (logForm) { logForm.addEventListener('submit', async e => { e.preventDefault(); const uid = state.currentUser?.uid; if (!uid) return alert('You must be signed-in to log sessions'); const btn = e.target.querySelector('button'); const original = btn.innerHTML; btn.innerText = 'Saving...'; btn.disabled = true; const newData = { date: Date.now(), sessionType: document.getElementById('inp-type').value, duration: Number(document.getElementById('inp-duration').value), intensity: Number(document.getElementById('inp-intensity').value), physicalFeel: Number(document.getElementById('inp-physical').value), mentalFeel: Number(document.getElementById('inp-mental').value), notes: document.getElementById('inp-notes').value.trim(), aiSummary: '' }; try { await addSessionToDb(uid, newData); e.target.reset(); const dur = document.getElementById('inp-duration'); if (dur) dur.value = 90; const val = document.getElementById('val-intensity'); if (val) val.innerText = '5/10'; const pv = document.getElementById('val-physical'); if (pv) pv.innerText = '5/10'; const mv = document.getElementById('val-mental'); if (mv) mv.innerText = '7/10'; switchView('dashboard'); } catch (err) { alert('Error saving session'); console.error(err); } finally { btn.innerHTML = original; btn.disabled = false; } }); }
+  const intensityInput = document.getElementById('inp-intensity'); if (intensityInput) intensityInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-intensity'); if (label) { label.innerText = `${val}/10`; label.className = `text-xs font-bold ${val <= 3 ? 'text-emerald-400' : val <= 7 ? 'text-amber-400' : 'text-red-500'}`; } });
+  const physicalInput = document.getElementById('inp-physical'); if (physicalInput) physicalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-physical'); if (label) label.innerText = `${val}/10`; });
+  const mentalInput = document.getElementById('inp-mental'); if (mentalInput) mentalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-mental'); if (label) label.innerText = `${val}/10`; });
 }
 
 window._GeminiState = state;
