@@ -1,4 +1,4 @@
-import { db, appId, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, where } from './firebase.js';
+import { db, appId, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, where, serverTimestamp } from './firebase.js';
 
 export function watchSessions(uid, onUpdate, onError) {
   if (!db) return () => {};
@@ -12,7 +12,7 @@ export function watchSessions(uid, onUpdate, onError) {
 
 export function addSession(uid, newSession) {
   if (!db) return Promise.reject(new Error('Firestore not configured'));
-  const payload = Object.assign({}, newSession, { ownerId: uid, createdAt: Date.now() });
+  const payload = Object.assign({}, newSession, { ownerId: uid, createdAt: serverTimestamp() });
   return addDoc(collection(db, 'logs'), payload);
 }
 

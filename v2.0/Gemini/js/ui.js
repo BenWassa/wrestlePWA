@@ -1,5 +1,4 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb } from './storage.js';
-import { serverTimestamp } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [] };
 
@@ -72,7 +71,7 @@ export function updateInsights(weeklyHrs) {
   const topFixes = Object.entries(fixCounts).sort((a,b) => b[1]-a[1]).slice(0,3);
   const insightCountEl = document.getElementById('insight-count'); if (insightCountEl) insightCountEl.innerText = topFixes.length;
   const container = document.getElementById('insights-content'); if (container) container.innerHTML = topFixes.length ? `<p class="text-indigo-100 text-sm mb-3">Pattern found in your "Notes". Focus on these:</p><ul class="space-y-3">${topFixes.map(([t,c]) => `<li class="bg-indigo-950/50 p-3 rounded-lg flex justify-between items-center border border-indigo-500/20"><span class="text-indigo-200 font-medium capitalize">${escapeHTML(t)}</span><span class="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">Reported ${c}x</span></li>`).join('')}</ul>` : `<p class="text-indigo-200 text-sm italic">Add more notes to get better insights.</p>`;
-  const avgEl = document.getElementById('avg-intensity'); if (avgEl) avgEl.innerText = `${(state.sessions.slice(0,5).reduce((a,c)=>a+(c.intensity||0),0) / Math.min(5, Math.max(1, state.sessions.length))).toFixed(1)} / 5`;
+  const avgEl = document.getElementById('avg-intensity'); if (avgEl) avgEl.innerText = `${(state.sessions.slice(0,5).reduce((a,c)=>a+(c.intensity||0),0) / Math.min(5, Math.max(1, state.sessions.length))).toFixed(1)} / 10`;
   const weeklyHoursEl = document.getElementById('weekly-hours'); if (weeklyHoursEl) weeklyHoursEl.innerText = `${weeklyHrs.toFixed(1)} hrs`;
   const msgEl = document.getElementById('volume-msg'); if (msgEl) { if (weeklyHrs > 5) msgEl.innerText = '🔥 High volume week! Prioritize recovery and sleep.'; else if (weeklyHrs > 0) msgEl.innerText = 'Consistency is key. Good work this week.'; else msgEl.innerText = 'Time to get back on the mat.'; }
 }
