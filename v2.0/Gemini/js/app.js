@@ -1,6 +1,6 @@
 import { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from './firebase.js';
 import { watchSessions } from './storage.js';
-import { initUI, renderApp, state } from './ui.js';
+import { initUI, renderApp, state, updateSyncIndicator } from './ui.js';
 
 // Init UI event listeners
 initUI();
@@ -41,12 +41,14 @@ export async function init() {
       state.currentUser = user;
       unsubscribeWatcher = watchSessions(user.uid, (data) => { state.sessions = data; state.firestoreError = null; renderApp(); }, (err) => { console.error('watchSessions error', err); state.firestoreError = err.message || String(err); renderApp(); });
       document.getElementById('loading-screen').classList.add('hidden');
+      updateSyncIndicator();
     } else {
       state.currentUser = null;
       state.sessions = [];
       state.firestoreError = null;
       renderApp();
       document.getElementById('loading-screen').classList.add('hidden');
+      updateSyncIndicator();
     }
   });
 }

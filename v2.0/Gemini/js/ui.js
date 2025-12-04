@@ -566,6 +566,8 @@ export function initUI() {
             }
         btnSettings?.addEventListener('click', () => panelSettings?.classList.remove('hidden'));
         settingsClose?.addEventListener('click', () => panelSettings?.classList.add('hidden'));
+        // Ensure the sync indicator reflects initial state
+        updateSyncIndicator();
 }
 
 // Toast Helper
@@ -594,6 +596,8 @@ export async function updateSyncIndicator() {
         }
     } catch (err) { /* ignore ping errors */ }
     if (!networkOnline) {
+        ind.dataset.reason = firestoreAvailable ? 'ping-failed' : 'no-firestore';
+        ind.title = firestoreAvailable ? 'Ping failed; network unreachable' : 'Firestore not configured';
         ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-[10px] font-bold text-slate-300">Network: OFFLINE</span><span class="ml-2 text-[10px] text-slate-400">Queued: ${queued}</span>`;
     } else {
         // Network online
@@ -609,6 +613,8 @@ export async function updateSyncIndicator() {
             updateSyncIndicator();
         } else {
             ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-[10px] font-bold text-slate-300">${fireState} · Live</span>`;
+            ind.dataset.reason = 'ok';
+            ind.title = `${fireState} · Live`;
         }
     }
     // Attach a click handler to trigger manual sync when there are queued items
