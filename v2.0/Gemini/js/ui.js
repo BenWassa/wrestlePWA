@@ -621,6 +621,7 @@ export async function updateSyncIndicator() {
     }
     // Attach a click handler to trigger manual sync when there are queued items
     ind.onclick = () => {
+        if (!networkOnline) { showToast('Offline — cannot sync'); return; }
         if (getQueuedCount(state.currentUser?.uid) > 0) {
             ind.classList.add('opacity-60');
             (async () => {
