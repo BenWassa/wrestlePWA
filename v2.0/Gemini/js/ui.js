@@ -590,20 +590,17 @@ export async function updateSyncIndicator() {
     // If ping is enabled, verify network reachability for a more accurate state
     try {
         const pingEnabled = localStorage.getItem('enable_ping') === 'true';
-        // If ping is enabled, refine status via fetch; otherwise rely on the above default
-        if (pingEnabled && networkOnline) {
+        // If ping is enabled, use ping to decide online/offline
+        if (pingEnabled) {
             const ok = await doPing();
-            if (!ok) {
-                // If ping fails but Firestore is present, prefer 'online' state per preference
-                if (!firestoreAvailable) networkOnline = false;
-                else ind.dataset.pingFailed = 'true';
-            }
+            networkOnline = !!ok;
+            if (!ok) ind.dataset.pingFailed = 'true';
         }
     } catch (err) { /* ignore ping errors */ }
     if (!networkOnline) {
-        ind.dataset.reason = firestoreAvailable ? 'ping-failed' : 'no-firestore';
-        ind.title = firestoreAvailable ? 'Ping failed; network unreachable' : 'Firestore not configured';
-        ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-[10px] font-bold text-slate-300">Network: OFFLINE</span><span class="ml-2 text-[10px] text-slate-400">Queued: ${queued}</span>`;
+        ind.dataset.reason = 'offline';
+        ind.title = 'Offline — network unreachable';
+        ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-slate-600"></div><span class="text-[10px] font-bold text-slate-400">Network: OFFLINE</span><span class="ml-2 text-[10px] text-slate-400">Queued: ${queued}</span>`;
     } else {
         // Network online
         const fireState = firestoreAvailable ? `<span class="text-emerald-400">Firestore</span>` : `<span class="text-slate-400">Local-only</span>`;
