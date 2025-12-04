@@ -7,7 +7,8 @@ const PRECACHE_ASSETS = [
   './js/ui.js',
   './js/firebase.js',
   './js/storage.js',
-  './manifest.json'
+  './manifest.json',
+  './WrestleIcon.png'
 ];
 
 self.addEventListener('install', (event) => {
