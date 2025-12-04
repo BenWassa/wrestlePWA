@@ -67,11 +67,12 @@ export function switchView(viewName) {
 // --- Data & Visual Formatting ---
 
 const LEVELS = [
-    { name: 'Rookie', hours: 0, color: '#94a3b8' },
-    { name: 'Varsity', hours: 20, color: '#34d399' },
-    { name: 'State Champ', hours: 100, color: '#60a5fa' },
-    { name: 'All-American', hours: 300, color: '#f59e0b' },
-    { name: 'Olympian', hours: 1000, color: '#f43f5e' }
+    { name: 'Rookie', hours: 0, color: '#94a3b8', icon: 'footprints', desc: 'Step on the mat. Learn the stance.' },
+    { name: 'Varsity', hours: 20, color: '#34d399', icon: 'medal', desc: 'Building the gas tank. Learning the moves.' },
+    { name: 'State Champ', hours: 100, color: '#60a5fa', icon: 'trophy', desc: 'Dominating local competition.' },
+    { name: 'All-American', hours: 300, color: '#f59e0b', icon: 'flag', desc: 'Elite status. National recognition.' },
+    { name: 'Olympian', hours: 1000, color: '#f43f5e', icon: 'crown', desc: 'Legendary status. Master of the sport.' },
+    { name: 'Hall of Fame', hours: 2500, color: '#a78bfa', icon: 'star', desc: 'A lifetime dedicated to wrestling.' }
 ];
 
 function getLevelInfo(totalHours) {
@@ -108,6 +109,69 @@ function getRelativeTime(ts) {
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     return `${days}d ago`;
+}
+
+// --- Levels / Gamification Modal ---
+
+function showLevelsModal() {
+    const modal = document.getElementById('modal-levels');
+    const container = document.getElementById('levels-timeline');
+    const totalHoursEl = document.getElementById('modal-total-hours');
+    
+    if (!modal || !container) return;
+
+    // Calculate current hours
+    const sessions = state.sessions || [];
+    const totalMins = sessions.reduce((sum, s) => sum + (Number(s.duration)||0), 0);
+    const totalHrs = totalMins / 60;
+
+    totalHoursEl.innerText = totalHrs.toFixed(1);
+
+    // Build HTML
+    let html = '';
+    
+    LEVELS.forEach((lvl, index) => {
+        const isUnlocked = totalHrs >= lvl.hours;
+        const isCurrent = isUnlocked && (index === LEVELS.length - 1 || totalHrs < LEVELS[index + 1].hours);
+        
+        let statusClass = 'locked';
+        let iconHtml = `<i data-lucide="lock" class="w-3 h-3"></i>`;
+        
+        if (isCurrent) {
+            statusClass = 'current';
+            iconHtml = `<i data-lucide="${lvl.icon}" class="w-4 h-4"></i>`;
+        } else if (isUnlocked) {
+            statusClass = 'unlocked';
+            iconHtml = `<i data-lucide="check" class="w-3 h-3"></i>`;
+        }
+
+        html += `
+            <div class="level-item ${statusClass}">
+                <div class="level-bullet z-10 bg-slate-900">
+                    ${iconHtml}
+                </div>
+                <div class="level-content">
+                    <div class="flex justify-between items-start mb-1">
+                        <h4 class="font-bold text-white text-sm">${lvl.name}</h4>
+                        <span class="text-[10px] font-mono ${isUnlocked ? 'text-emerald-400' : 'text-slate-500'}">${lvl.hours} HRS</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-snug">${lvl.desc}</p>
+                    ${isCurrent ? `<div class="mt-2 text-[10px] font-bold text-amber-500 uppercase tracking-wide">Current Rank</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    modal.classList.remove('hidden');
+    
+    // Refresh icons inside the modal
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Close handlers
+    const closeBtn = document.getElementById('close-levels');
+    closeBtn.onclick = () => modal.classList.add('hidden');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
 }
 
 // --- Component Rendering ---
@@ -589,6 +653,14 @@ export function initUI() {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') updateSyncIndicator();
         });
+
+        // Rank Card Click Listener - Open Levels Modal
+        const rankCard = document.getElementById('rank-card');
+        if (rankCard) {
+            rankCard.addEventListener('click', () => {
+                showLevelsModal();
+            });
+        }
 }
 
 // Toast Helper

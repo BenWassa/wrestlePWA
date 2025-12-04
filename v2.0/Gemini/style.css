@@ -142,3 +142,78 @@ input[type=range]::-webkit-slider-runnable-track {
     max-height: 90vh;
     overflow-y: auto;
 }
+
+/* --- Level / Rank Modal Styles --- */
+
+/* The timeline vertical line */
+.level-timeline {
+    position: relative;
+    padding-left: 32px;
+}
+.level-timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px; /* Centers line with the 24px bullets */
+    top: 24px;
+    bottom: 0;
+    width: 2px;
+    background: #1e293b;
+    z-index: 0;
+}
+
+/* Individual Level Item */
+.level-item {
+    position: relative;
+    margin-bottom: 24px;
+    z-index: 1;
+}
+
+/* The circle/icon on the timeline */
+.level-bullet {
+    position: absolute;
+    left: -32px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0f172a;
+    border: 2px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+/* States */
+.level-item.unlocked .level-bullet {
+    background: #10b981; /* Emerald */
+    border-color: #10b981;
+    color: #0f172a;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+.level-item.current .level-bullet {
+    background: #f59e0b; /* Amber */
+    border-color: #f59e0b;
+    color: #0f172a;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    scale: 1.2;
+}
+.level-item.locked .level-bullet {
+    border-color: #334155;
+    color: #334155;
+}
+
+/* Card appearance */
+.level-content {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+}
+.level-item.current .level-content {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.1), rgba(30, 41, 59, 1));
+}
+.level-item.locked .level-content {
+    opacity: 0.5;
+}
