@@ -59,8 +59,28 @@ export function renderApp() {
   // Show Firestore error banner if present
   const firestoreBanner = document.getElementById('firestore-error-banner');
   if (firestoreBanner) {
-    if (state.firestoreError) { firestoreBanner.classList.remove('hidden'); firestoreBanner.innerText = `Firestore error: ${state.firestoreError}`; }
-    else { firestoreBanner.classList.add('hidden'); firestoreBanner.innerText = ''; }
+    if (state.firestoreError) {
+      firestoreBanner.classList.remove('hidden');
+      // Remove previous content/children
+      firestoreBanner.textContent = '';
+      // Basic sanitized message
+      const msg = document.createElement('span');
+      msg.textContent = `Firestore error: ${state.firestoreError}`;
+      firestoreBanner.appendChild(msg);
+      // Try to find a firebase console link in the message and add an action link
+      const match = String(state.firestoreError).match(/https?:\/\/console\.firebase\.google\.com[^\s)"']+/i);
+      if (match) {
+        const a = document.createElement('a');
+        a.href = match[0];
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'underline text-red-300 ml-2';
+        a.textContent = 'Create required index';
+        firestoreBanner.appendChild(a);
+      }
+    } else {
+      firestoreBanner.classList.add('hidden'); firestoreBanner.textContent = '';
+    }
   }
   const sessionsArr = (state.sessions || []).slice();
   sessionsArr.sort((a,b) => { const aDt = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date || 0); const bDt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date || 0); return bDt - aDt; });
