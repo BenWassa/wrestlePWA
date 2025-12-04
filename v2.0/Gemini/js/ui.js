@@ -582,6 +582,7 @@ function showToast(msg) {
 // Sync Indicator Logic
 export async function updateSyncIndicator() {
     const ind = document.getElementById('sync-indicator');
+    if (ind) delete ind.dataset.pingFailed;
     // Treat as online by default if Firestore/DB is available; this keeps the app 'live' by default as requested
     const firestoreAvailable = (typeof db !== 'undefined' && db);
     let networkOnline = navigator.onLine || !!firestoreAvailable;
