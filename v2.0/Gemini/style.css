@@ -45,9 +45,14 @@ input[type=range]::-webkit-slider-runnable-track {
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 .heatmap-cell:hover {
-    transform: scale(1.2);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     opacity: 1;
+}
+.heatmap-cell.empty {
+    opacity: 0.3;
+    border-color: rgba(255,255,255,0.01);
+    background: transparent;
 }
 .heatmap-labels div { min-width: 12px; }
 .heatmap-header {
@@ -57,19 +62,29 @@ input[type=range]::-webkit-slider-runnable-track {
     justify-items: center;
     padding: 0 12px;
 }
-#heatmap-grid {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    column-gap: 8px;
-    row-gap: 8px;
-    justify-items: center;
+.heatmap-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px;
     background: rgba(15, 23, 42, 0.5);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 16px;
 }
-.heatmap-cell.current-week {
-    border-color: rgba(245, 158, 11, 0.6);
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25), 0 4px 10px rgba(0, 0, 0, 0.35);
+.week-row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.03);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+}
+.week-row.current-week {
+    border-color: rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2), 0 6px 16px rgba(0,0,0,0.35);
+    background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(16,185,129,0.05));
 }
 
 /* Session card notes truncation */

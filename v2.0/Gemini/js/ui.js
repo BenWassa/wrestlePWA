@@ -3,6 +3,9 @@ import { db } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
 
+const PING_INTERVAL_MS = 15000;
+let pingIntervalId = null;
+
 function escapeHTML(s) {
     if (!s) return '';
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -22,6 +25,11 @@ async function doPing(timeout = 2000, url = 'https://clients3.google.com/generat
     }
 }
 let charts = { volume: null, types: null }; // Store chart instances
+
+function startPingLoop() {
+    if (pingIntervalId) clearInterval(pingIntervalId);
+    pingIntervalId = setInterval(() => updateSyncIndicator(), PING_INTERVAL_MS);
+}
 
 // --- Navigation & View Management ---
 
@@ -146,29 +154,49 @@ function renderHeatmap(sessions) {
     // Render Grid (Rows = weeks, Cols = days of week), last 60 days horizontally across rows
     const lastDates = [];
     for (let i = 59; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
-    // Count unique days in the last 60
+    // Pad the front so the first day aligns with its weekday column
+    const cells = [];
+    const firstDay = lastDates[0].getDay();
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    lastDates.forEach(d => cells.push(d));
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    // Count unique days in the last 60 (not counting padding)
     const daysWithSessions = lastDates.reduce((acc, d) => acc + ((dateMap.get(d.toISOString().split('T')[0]) || 0) > 0 ? 1 : 0), 0);
 
-    // Render each date as a grid cell, colorized by session count
-    lastDates.forEach((d, idx) => {
-        const key = d.toISOString().split('T')[0];
-        const count = dateMap.get(key) || 0;
-        const el = document.createElement('div');
-        el.className = 'heatmap-cell transition-all';
-        const title = `${formatDate(d)} - ${count} session${count !== 1 ? 's' : ''}`;
-        el.title = title;
-        el.setAttribute('data-count', String(count));
-        el.setAttribute('aria-label', title);
+    // Chunk into weeks
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) { weeks.push(cells.slice(i, i + 7)); }
 
-        // Color logic - presence-only (don't emphasize multiple sessions per day)
-        if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
-        else el.style.backgroundColor = '#10b981'; // emerald-500 presence
+    // Render week rows; accent by week rather than by day
+    weeks.forEach((week, wIdx) => {
+        const weekEl = document.createElement('div');
+        weekEl.className = 'week-row transition-all';
+        const isCurrentWeek = wIdx === weeks.length - 1;
+        if (isCurrentWeek) weekEl.classList.add('current-week');
 
-        // Flag the most recent week
-        if (idx >= lastDates.length - 7) el.classList.add('current-week');
+        week.forEach(cell => {
+            const el = document.createElement('div');
+            el.className = 'heatmap-cell transition-all';
+            if (!cell) {
+                el.classList.add('empty');
+                weekEl.appendChild(el);
+                return;
+            }
+            const key = cell.toISOString().split('T')[0];
+            const count = dateMap.get(key) || 0;
+            const title = `${formatDate(cell)} - ${count} session${count !== 1 ? 's' : ''}`;
+            el.title = title;
+            el.setAttribute('data-count', String(count));
+            el.setAttribute('aria-label', title);
 
-        // let rows align horizontally by week via CSS grid styling on heatmap-grid
-        grid.appendChild(el);
+            // Color logic - presence-only (don't emphasize multiple sessions per day)
+            if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
+            else el.style.backgroundColor = '#10b981'; // emerald-500 presence
+
+            weekEl.appendChild(el);
+        });
+        grid.appendChild(weekEl);
     });
 
     // Update consistency metric for last 60 days
@@ -555,6 +583,10 @@ export function initUI() {
         if (localStorage.getItem('enable_ping') === null) { localStorage.setItem('enable_ping', 'true'); }
         // Ensure the sync indicator reflects initial state
         updateSyncIndicator();
+        startPingLoop();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') updateSyncIndicator();
+        });
 }
 
 // Toast Helper
