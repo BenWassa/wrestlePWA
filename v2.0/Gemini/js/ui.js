@@ -150,23 +150,27 @@ function renderHeatmap(sessions) {
     const daysWithSessions = lastDates.reduce((acc, d) => acc + ((dateMap.get(d.toISOString().split('T')[0]) || 0) > 0 ? 1 : 0), 0);
 
     // Render each date as a grid cell, colorized by session count
-    lastDates.forEach(d => {
+    lastDates.forEach((d, idx) => {
         const key = d.toISOString().split('T')[0];
         const count = dateMap.get(key) || 0;
         const el = document.createElement('div');
         el.className = 'heatmap-cell transition-all';
-        const title = `${formatDate(d)} — ${count} session${count !== 1 ? 's' : ''}`;
+        const title = `${formatDate(d)} - ${count} session${count !== 1 ? 's' : ''}`;
         el.title = title;
         el.setAttribute('data-count', String(count));
         el.setAttribute('aria-label', title);
 
         // Color logic - presence-only (don't emphasize multiple sessions per day)
         if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
-        else el.style.backgroundColor = '#10b981'; // emerald-500 — presence
+        else el.style.backgroundColor = '#10b981'; // emerald-500 presence
+
+        // Flag the most recent week
+        if (idx >= lastDates.length - 7) el.classList.add('current-week');
 
         // let rows align horizontally by week via CSS grid styling on heatmap-grid
         grid.appendChild(el);
     });
+
     // Update consistency metric for last 60 days
     const consistencyEl = document.getElementById('consistency-60');
     if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/60 days`;
