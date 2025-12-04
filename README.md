@@ -1,10 +1,4 @@
-Here is a comprehensive `README.md` file tailored for the MatMind PWA project.
-
-It documents the architecture, setup instructions, offline capabilities, and the gamification system found in your code.
-
------
-
-# MatMind Pro 🤼‍♂️
+# MatMind 🤼‍♂️
 
 **MatMind** is an offline-first, Progressive Web App (PWA) designed for wrestlers to track training volume, intensity, and technique. It features a robust gamification system, consistency heatmaps, and analytics to visualize progress over seasons.
 
