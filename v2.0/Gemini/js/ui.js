@@ -350,7 +350,7 @@ export function renderApp() {
     const levelEl = document.getElementById('level-name');
     if (levelEl) {
         levelEl.innerText = level.current.name;
-        levelEl.style.color = level.current.name === 'Rookie' ? '#fff' : level.current.color;
+        levelEl.style.color = level.current.name === 'Fresh Fish' ? '#fff' : level.current.color;
     }
     
     // Progress Bar
