@@ -39,63 +39,76 @@ input[type=range]::-webkit-slider-runnable-track {
     border-radius: 4px;
 }
 
-/* Heatmap Grid */
-.heatmap-cell {
-    border-radius: 3px;
-    width: 12px;
-    height: 12px;
-    border: 1px solid rgba(255,255,255,0.02);
-    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+/* --- Heatmap Upgrade (30-Day View) --- */
+
+.heatmap-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px;
+    max-width: 360px; /* Limits width so it doesn't stretch too wide */
+    margin: 0 auto;   /* Centers it */
 }
-.heatmap-cell:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.35);
-    opacity: 1;
-}
-.heatmap-cell.empty {
-    opacity: 0.3;
-    border-color: rgba(255,255,255,0.01);
-    background: transparent;
-}
-.heatmap-labels div { min-width: 12px; }
-.heatmap-header {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    column-gap: var(--heatmap-col-gap);
-    justify-items: center;
-    padding: 0 var(--heatmap-pad);
-    max-width: var(--heatmap-max-width);
-    margin: 0 auto;
-    color: #cbd5e1;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-}
-.heatmap-grid {
+
+/* The grid container that holds both headers and rows */
+.heatmap-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: var(--heatmap-pad);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.35));
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
-    max-width: var(--heatmap-max-width);
-    margin: 0 auto;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    gap: 8px;
 }
-.week-row {
+
+/* Common Grid Layout for Header and Rows */
+.heatmap-row-grid {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    column-gap: var(--heatmap-col-gap);
-    row-gap: 4px;
-    padding: 6px;
-    border: 1px solid rgba(255,255,255,0.03);
-    border-radius: 10px;
-    background: rgba(255,255,255,0.012);
+    grid-template-columns: repeat(7, 1fr); /* 7 equal columns */
+    gap: 6px; /* Spacing between cells */
+    justify-items: center;
 }
-.week-row.current-week {
-    border-color: rgba(245, 158, 11, 0.5);
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.18), 0 4px 12px rgba(0,0,0,0.25);
-    background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(16,185,129,0.05));
+
+/* Headers (S M T W T F S) */
+.heatmap-header-cell {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 4px;
+}
+
+/* The Day Cells */
+.heatmap-cell {
+    width: 100%; /* Fills the grid column */
+    aspect-ratio: 1/1; /* Keeps them perfectly square */
+    border-radius: 6px;
+    background-color: #1e293b; /* Default empty state */
+    border: 1px solid rgba(255,255,255,0.02);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+}
+
+.heatmap-cell.has-data {
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.1);
+    z-index: 10;
+}
+
+/* Animation for loading */
+.heatmap-cell {
+    animation: popIn 0.3s backwards;
+}
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Week Row Container (Optional visual grouping) */
+.week-row-wrapper {
+    /* We don't need styling here, just a wrapper for the grid */
+    display: contents; 
 }
 
 /* Session card notes truncation */

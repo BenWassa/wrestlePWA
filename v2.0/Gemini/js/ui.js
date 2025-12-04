@@ -117,24 +117,21 @@ function renderHeatmap(sessions) {
     if (!grid) return;
     grid.innerHTML = '';
     
-    // Generate last 60 days
+    // 1. Map Data
     const dateMap = new Map();
-    
-    // Populate session counts per day using session date
     sessions.forEach(s => {
         const d = getSessionDateObj(s);
         const key = d.toISOString().split('T')[0];
         dateMap.set(key, (dateMap.get(key) || 0) + 1);
     });
 
-    // Weekly Streak: compute consecutive weeks (Sunday-starting) with any practice
+    // 2. Calculate Streaks (Existing logic preserved)
     const weekSet = new Set();
-    for (const k of dateMap.keys()) {
-        const day = new Date(k);
-        // normalize to week start (Sunday)
-        const sunday = new Date(day);
-        sunday.setDate(sunday.getDate() - sunday.getDay());
-        weekSet.add(sunday.toISOString().split('T')[0]);
+    for (const k of dateMap.keys()) { 
+        const day = new Date(k); 
+        const sunday = new Date(day); 
+        sunday.setDate(sunday.getDate() - sunday.getDay()); 
+        weekSet.add(sunday.toISOString().split('T')[0]); 
     }
     let weeklyStreak = 0;
     const today = new Date();
@@ -146,62 +143,67 @@ function renderHeatmap(sessions) {
         if (weekSet.has(k)) weeklyStreak++;
         else break;
         checkWeek.setDate(checkWeek.getDate() - 7);
-        if (weeklyStreak > 52) break; // safety
+        if (weeklyStreak > 52) break;
     }
     const streakEl = document.getElementById('streak-counter');
     if (streakEl) streakEl.innerText = `${weeklyStreak} Week Streak ${weeklyStreak > 3 ? '🔥' : ''}`;
 
-    // Render Grid (Rows = weeks, Cols = days of week), last 30 days horizontally across rows
+    // 3. Generate Grid (Last 35 Days -> 5 weeks of 7-day rows), and align to weekday columns
     const lastDates = [];
-    for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
-    // Pad the front so the first day aligns with its weekday column
+    for (let i = 34; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
+
+    // Align start: Front-pad so the first date lands on the correct day of week
     const cells = [];
-    const firstDay = lastDates[0].getDay();
-    for (let i = 0; i < firstDay; i++) cells.push(null);
+    const firstDayOfWeek = lastDates[0].getDay(); // 0 = Sunday
+    for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
     lastDates.forEach(d => cells.push(d));
     while (cells.length % 7 !== 0) cells.push(null);
 
-    // Count unique days in the last 30 (not counting padding)
-    const daysWithSessions = lastDates.reduce((acc, d) => acc + ((dateMap.get(d.toISOString().split('T')[0]) || 0) > 0 ? 1 : 0), 0);
-
-    // Chunk into weeks
+    // 4. Render Rows
     const weeks = [];
     for (let i = 0; i < cells.length; i += 7) { weeks.push(cells.slice(i, i + 7)); }
 
-    // Render week rows; accent by week rather than by day
-    weeks.forEach((week, wIdx) => {
-        const weekEl = document.createElement('div');
-        weekEl.className = 'week-row transition-all';
-        const isCurrentWeek = wIdx === weeks.length - 1;
-        if (isCurrentWeek) weekEl.classList.add('current-week');
+    let daysWithSessions = 0; // for the x/30 counter
+
+    weeks.forEach((week, index) => {
+        // Create the row container
+        const rowEl = document.createElement('div');
+        rowEl.className = 'heatmap-row-grid'; // Uses the same grid as header
+        // Add animation delay based on row index
+        rowEl.style.animationDelay = `${index * 50}ms`;
 
         week.forEach(cell => {
             const el = document.createElement('div');
-            el.className = 'heatmap-cell transition-all';
-            if (!cell) {
-                el.classList.add('empty');
-                weekEl.appendChild(el);
-                return;
-            }
+            el.className = 'heatmap-cell';
+            if (!cell) { el.style.opacity = '0'; rowEl.appendChild(el); return; }
+
             const key = cell.toISOString().split('T')[0];
             const count = dateMap.get(key) || 0;
-            const title = `${formatDate(cell)} - ${count} session${count !== 1 ? 's' : ''}`;
-            el.title = title;
-            el.setAttribute('data-count', String(count));
-            el.setAttribute('aria-label', title);
 
-            // Color logic - presence-only (don't emphasize multiple sessions per day)
-            if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
-            else el.style.backgroundColor = '#10b981'; // emerald-500 presence
+            // Only count sessions within last 30 days for the label
+            const diffTime = Math.abs(today - cell);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (count > 0 && diffDays <= 30) daysWithSessions++;
 
-            weekEl.appendChild(el);
+            // Styling + classes
+            if (count > 0) {
+                el.classList.add('has-data');
+                el.style.backgroundColor = '#f59e0b'; // amber
+                if (count > 1) el.style.backgroundColor = '#b45309';
+            } else {
+                if (cell.toDateString() === today.toDateString()) el.style.border = '1px solid #94a3b8';
+            }
+
+            el.title = `${formatDate(cell)}: ${count} session${count !== 1 ? 's' : ''}`;
+            rowEl.appendChild(el);
         });
-        grid.appendChild(weekEl);
+
+        grid.appendChild(rowEl);
     });
 
-    // Update consistency metric for last 30 days
+    // Update consistency metric
     const consistencyEl = document.getElementById('consistency-30');
-    if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/30 days`;
+    if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/30`;
 }
 
 function createSessionCard(s, isJournal) {
