@@ -113,7 +113,7 @@ function renderHeatmap(sessions) {
     const today = new Date();
     const dateMap = new Map();
     
-    // Populate session counts per day
+    // Populate session counts per day using session date
     sessions.forEach(s => {
         const d = getSessionDateObj(s);
         const key = d.toISOString().split('T')[0];
@@ -133,24 +133,34 @@ function renderHeatmap(sessions) {
     const streakEl = document.getElementById('streak-counter');
     if (streakEl) streakEl.innerText = `${streak} Day Streak ${streak > 3 ? '🔥' : ''}`;
 
-    // Render Grid (Cols = weeks, Rows = days)
-    // Simplified: Just render 60 squares backwards
-    for (let i = 59; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const k = d.toISOString().split('T')[0];
-        const count = dateMap.get(k) || 0;
-        
+    // Render Grid (Rows = weeks, Cols = days of week), last 60 days horizontally across rows
+    const lastDates = [];
+    for (let i = 59; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
+    // Count unique days in the last 60
+    const daysWithSessions = lastDates.reduce((acc, d) => acc + ((dateMap.get(d.toISOString().split('T')[0]) || 0) > 0 ? 1 : 0), 0);
+
+    // Render each date as a grid cell, colorized by session count
+    lastDates.forEach(d => {
+        const key = d.toISOString().split('T')[0];
+        const count = dateMap.get(key) || 0;
         const el = document.createElement('div');
         el.className = 'heatmap-cell transition-all';
-        
+        const title = `${formatDate(d)} — ${count} session${count !== 1 ? 's' : ''}`;
+        el.title = title;
+        el.setAttribute('data-count', String(count));
+        el.setAttribute('aria-label', title);
+
         // Color logic
-        if (count === 0) el.style.backgroundColor = '#1e293b'; // slate-800
+        if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
         else if (count === 1) el.style.backgroundColor = '#0d9488'; // teal-600
         else el.style.backgroundColor = '#f59e0b'; // amber-500
-        
+
+        // let rows align horizontally by week via CSS grid styling on heatmap-grid
         grid.appendChild(el);
-    }
+    });
+    // Update consistency metric for last 60 days
+    const consistencyEl = document.getElementById('consistency-60');
+    if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/60 days`;
 }
 
 function createSessionCard(s, isJournal) {
@@ -282,20 +292,12 @@ export function showNoteModal(s) {
     // wire actions
     document.getElementById('modal-copy').onclick = () => { navigator.clipboard.writeText(s.notes || '').then(()=> showToast('Copied to clipboard')); };
     document.getElementById('modal-share').onclick = () => { if (navigator.share) navigator.share({ title: 'Practice note', text: s.notes || '' }).catch(err => showToast('Share failed')); else showToast('Share not supported'); };
-    document.getElementById('modal-duplicate').onclick = () => { duplicateSessionToForm(s); modal.classList.add('hidden'); };
     document.getElementById('modal-close').onclick = () => modal.classList.add('hidden');
+    // close when clicking overlay outside the content
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
 }
 
-function duplicateSessionToForm(s) {
-    // Prefill the log form and switch view
-    switchView('log');
-    document.getElementById('inp-type').value = s.sessionType || s.type || 'Practice';
-    document.getElementById('inp-duration').value = s.duration || 60; document.getElementById('val-duration').innerText = s.duration || 60;
-    document.getElementById('inp-intensity').value = s.intensity || 5; document.getElementById('val-intensity').innerText = `${s.intensity || 5}/10`;
-    document.getElementById('inp-physical').value = s.physicalFeel || s.physical || 5; document.getElementById('val-physical').innerText = `${s.physicalFeel || s.physical || 5}/10`;
-    document.getElementById('inp-mental').value = s.mentalFeel || s.mental || 5; document.getElementById('val-mental').innerText = `${s.mentalFeel || s.mental || 5}/10`;
-    document.getElementById('inp-notes').value = s.notes || '';
-}
+    // no duplicate action - removed per user request
 
 // --- Chart.js Integration ---
 
@@ -357,7 +359,7 @@ function renderCharts(rangeDays = 7) {
 
     // 2. Type Distribution (Doughnut)
     const typeCounts = {};
-    state.sessions.forEach(s => { 
+    filtered.forEach(s => { 
         const t = s.sessionType || 'Practice';
         typeCounts[t] = (typeCounts[t] || 0) + 1; 
     });
@@ -379,8 +381,15 @@ function renderCharts(rangeDays = 7) {
         }
     });
 
+    // Compute top keyword (derived from notes) for the filtered range
+    const fixCounts = {};
+    filtered.forEach(s => { if (s.notes) s.notes.split(/[,.\n]/).forEach(p => { const key = (p || '').trim().toLowerCase(); if (key.length > 3) fixCounts[key] = (fixCounts[key] || 0) + 1; }); });
+    const topFixes = Object.entries(fixCounts).sort((a,b) => b[1]-a[1]).slice(0,1);
+    const topKeywordEl = document.getElementById('top-keyword');
+    if (topKeywordEl) topKeywordEl.innerText = topFixes.length ? topFixes[0][0] : '--';
+
     // Update Mat IQ (Volume x Intensity / 100)
-    const totalScore = state.sessions.reduce((acc, s) => acc + ((s.duration || 0) * (s.intensity || 0)), 0);
+    const totalScore = filtered.reduce((acc, s) => acc + ((Number(s.duration) || 0) * (Number(s.intensity) || 0)), 0);
     const matIq = Math.floor(totalScore / 100);
     document.getElementById('mat-iq').innerText = matIq;
 }
