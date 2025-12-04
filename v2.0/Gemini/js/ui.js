@@ -188,8 +188,8 @@ function renderHeatmap(sessions) {
             // Styling + classes
             if (count > 0) {
                 el.classList.add('has-data');
-                el.style.backgroundColor = '#f59e0b'; // amber
-                if (count > 1) el.style.backgroundColor = '#b45309';
+                el.style.backgroundColor = '#10b981'; // emerald green
+                if (count > 1) el.style.backgroundColor = '#059669'; // darker green
             } else {
                 if (cell.toDateString() === today.toDateString()) el.style.border = '1px solid #94a3b8';
             }

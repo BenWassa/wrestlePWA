@@ -79,7 +79,7 @@ input[type=range]::-webkit-slider-runnable-track {
 .heatmap-cell {
     width: 100%; /* Fills the grid column */
     aspect-ratio: 1/1; /* Keeps them perfectly square */
-    border-radius: 6px;
+    border-radius: 4px;
     background-color: #1e293b; /* Default empty state */
     border: 1px solid rgba(255,255,255,0.02);
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -87,12 +87,12 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 .heatmap-cell.has-data {
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .heatmap-cell:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
     z-index: 10;
 }
 
