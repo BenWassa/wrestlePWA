@@ -101,7 +101,9 @@
         <!-- VIEW: Log Session -->
         <div id="view-log" class="hidden p-4 space-y-6 animate-fade-in">
             <h2 class="text-2xl font-bold text-white">Log Session</h2>
-            
+                        <div class="flex items-center gap-2">
+                            <button id="btn-sample" type="button" class="ml-auto py-2 px-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm">Quick Sample</button>
+                        </div>
             <form id="log-form" class="space-y-6">
                 <!-- Type & Duration -->
                 <div class="grid grid-cols-2 gap-4">
@@ -230,5 +232,7 @@
 
     <!-- Module entry -->
     <script type="module" src="js/app.js"></script>
+    <!-- Toast notification -->
+    <div id="toast" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2 rounded-lg z-50 text-sm"></div>
 </body>
 </html>

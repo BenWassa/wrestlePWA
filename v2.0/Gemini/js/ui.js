@@ -121,6 +121,31 @@ export function initUI() {
   const physicalInput = document.getElementById('inp-physical'); if (physicalInput) physicalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-physical'); if (label) label.innerText = `${val}/10`; });
   const mentalInput = document.getElementById('inp-mental'); if (mentalInput) mentalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-mental'); if (label) label.innerText = `${val}/10`; });
 
+  // Quick sample button for testing - creates a sample session
+  const sampleBtn = document.getElementById('btn-sample');
+  if (sampleBtn) sampleBtn.addEventListener('click', async () => {
+    const uid = state.currentUser?.uid;
+    if (!uid) { showToast('Sign in to test sample logging'); return; }
+    const sample = {
+      date: Date.now(),
+      sessionType: 'Practice',
+      duration: 60,
+      intensity: 6,
+      physicalFeel: 5,
+      mentalFeel: 6,
+      notes: 'Quick sample session created for testing',
+      aiSummary: ''
+    };
+    try {
+      await addSessionToDb(uid, sample);
+      showToast('Sample log saved — check Journal');
+      switchView('journal');
+    } catch (err) {
+      console.error('Sample save error', err);
+      showToast('Error creating sample: ' + (err.message || err));
+    }
+  });
+
   // Sync indicator: show network and Firestore persistence state
   const indicator = document.getElementById('sync-indicator');
   function updateSyncIndicator() {
@@ -145,6 +170,15 @@ export function initUI() {
   // update on change
   window.addEventListener('online', updateSyncIndicator);
   window.addEventListener('offline', updateSyncIndicator);
+}
+
+// Toast helper
+export function showToast(msg, timeout = 3000) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), timeout);
 }
 
 window._GeminiState = state;
