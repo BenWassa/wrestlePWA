@@ -1,6 +1,9 @@
 /* Base Resets */
 :root {
   --safe-bottom: env(safe-area-inset-bottom);
+  --heatmap-col-gap: 6px;
+  --heatmap-pad: 8px;
+  --heatmap-max-width: 220px;
 }
 
 body { 
@@ -39,14 +42,14 @@ input[type=range]::-webkit-slider-runnable-track {
 /* Heatmap Grid */
 .heatmap-cell {
     border-radius: 3px;
-    width: 16px;
-    height: 16px;
-    border: 1px solid rgba(255,255,255,0.03);
+    width: 12px;
+    height: 12px;
+    border: 1px solid rgba(255,255,255,0.02);
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 .heatmap-cell:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.35);
     opacity: 1;
 }
 .heatmap-cell.empty {
@@ -58,32 +61,40 @@ input[type=range]::-webkit-slider-runnable-track {
 .heatmap-header {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    column-gap: 8px;
+    column-gap: var(--heatmap-col-gap);
     justify-items: center;
-    padding: 0 12px;
+    padding: 0 var(--heatmap-pad);
+    max-width: var(--heatmap-max-width);
+    margin: 0 auto;
+    color: #cbd5e1;
+    font-weight: 700;
+    letter-spacing: 0.08em;
 }
 .heatmap-grid {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    background: rgba(15, 23, 42, 0.5);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 16px;
+    gap: 6px;
+    padding: var(--heatmap-pad);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.35));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    max-width: var(--heatmap-max-width);
+    margin: 0 auto;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }
 .week-row {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    column-gap: 8px;
-    row-gap: 6px;
-    padding: 8px 10px;
+    column-gap: var(--heatmap-col-gap);
+    row-gap: 4px;
+    padding: 6px;
     border: 1px solid rgba(255,255,255,0.03);
-    border-radius: 12px;
-    background: rgba(255,255,255,0.02);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.012);
 }
 .week-row.current-week {
-    border-color: rgba(245, 158, 11, 0.45);
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2), 0 6px 16px rgba(0,0,0,0.35);
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.18), 0 4px 12px rgba(0,0,0,0.25);
     background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(16,185,129,0.05));
 }
 

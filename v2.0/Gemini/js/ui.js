@@ -151,9 +151,9 @@ function renderHeatmap(sessions) {
     const streakEl = document.getElementById('streak-counter');
     if (streakEl) streakEl.innerText = `${weeklyStreak} Week Streak ${weeklyStreak > 3 ? '🔥' : ''}`;
 
-    // Render Grid (Rows = weeks, Cols = days of week), last 60 days horizontally across rows
+    // Render Grid (Rows = weeks, Cols = days of week), last 30 days horizontally across rows
     const lastDates = [];
-    for (let i = 59; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
+    for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); lastDates.push(d); }
     // Pad the front so the first day aligns with its weekday column
     const cells = [];
     const firstDay = lastDates[0].getDay();
@@ -161,7 +161,7 @@ function renderHeatmap(sessions) {
     lastDates.forEach(d => cells.push(d));
     while (cells.length % 7 !== 0) cells.push(null);
 
-    // Count unique days in the last 60 (not counting padding)
+    // Count unique days in the last 30 (not counting padding)
     const daysWithSessions = lastDates.reduce((acc, d) => acc + ((dateMap.get(d.toISOString().split('T')[0]) || 0) > 0 ? 1 : 0), 0);
 
     // Chunk into weeks
@@ -199,9 +199,9 @@ function renderHeatmap(sessions) {
         grid.appendChild(weekEl);
     });
 
-    // Update consistency metric for last 60 days
-    const consistencyEl = document.getElementById('consistency-60');
-    if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/60 days`;
+    // Update consistency metric for last 30 days
+    const consistencyEl = document.getElementById('consistency-30');
+    if (consistencyEl) consistencyEl.innerText = `${daysWithSessions}/30 days`;
 }
 
 function createSessionCard(s, isJournal) {
