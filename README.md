@@ -5,6 +5,7 @@ A free, offline-first Progressive Web App (PWA) for wrestlers to log practices, 
 ## Features
 
 - **Offline-First**: Works without internet connection using service workers and IndexedDB.
+ - **Offline-First**: Works without internet connection using service workers, IndexedDB and a queued write mechanism that persists logs locally when offline.
 - **Practice Logging**: Record and track wrestling practices.
 - **Progress Tracking**: Monitor improvements over time.
 - **Badge System**: Earn badges for milestones.
@@ -73,12 +74,15 @@ This PWA follows best practices for minimal, personal-use applications:
 - Log practices by entering details in the app.
 - View progress charts and earned badges.
 - Generate AI prompts for motivation.
+ - Import your previous app's JSON backup via Dashboard -> Import Backup (select .json file) to migrate past practice data.
 
 ## Development
 
 - Edit HTML/CSS/JS files directly.
 - Test service worker by going offline in dev tools.
 - Use IndexedDB dev tools to inspect stored data.
+ - If running with Firebase enabled, the app stores session logs under the Firestore path `users/{uid}/logs` rather than a flat `logs` collection — this simplifies security rules and avoids composite index requirements.
+ - Offline writes are queued and persisted in localStorage while offline; use the small "Sync now" button in the app to flush any queued writes when back online (or it will be attempted automatically when the app reconnects).
 
 ## License
 

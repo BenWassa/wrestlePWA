@@ -10,6 +10,8 @@
     "_example": {
       "id": 1,
       "date": "2025-10-01",
+      "ownerId": "user123",
+      "createdAt": "2025-10-01T12:00:00Z",
       "duration": 90,
       "type": "drills",
       "intensity": 7,
@@ -66,6 +68,17 @@
         "required": false,
         "maxLength": 500,
         "description": "Free-form notes about the session"
+      }
+    ,
+      "ownerId": {
+        "type": "string",
+        "required": false,
+        "description": "Owner user ID (if stored in Firestore under users/{uid}/logs)"
+      },
+      "createdAt": {
+        "type": "string",
+        "required": false,
+        "description": "ISO timestamp when the record was created or synced to server"
       }
     }
   },

@@ -1,4 +1,4 @@
-import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb } from './storage.js';
+import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb, syncQueuedWrites, getQueuedCount } from './storage.js';
 import { db } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
@@ -27,6 +27,7 @@ export function createSessionCard(s, isJournal) {
   const intensityColor = (s.intensity || 0) >= 8 ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500';
   const icon = (s.intensity || 0) >= 8 ? 'activity' : 'dumbbell';
   const deleteBtn = isJournal ? `<button data-id="${s.id}" class="delete-btn absolute top-4 right-4 text-slate-600 hover:text-red-500 transition-colors p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
+  const queuedBadge = s.queued ? `<span class="ml-2 inline-block text-[10px] px-2 py-0.5 rounded bg-yellow-600 text-slate-900 font-bold">Queued</span>` : '';
   const notesHtml = s.notes ? `<div class="mt-2 text-slate-300 text-sm">${escapeHTML(s.notes)}</div>` : '';
   const aiHtml = s.aiSummary ? `<div class="mt-2 text-slate-400 italic text-sm">AI: ${escapeHTML(s.aiSummary)}</div>` : '';
   const feelHtml = `<div class="mt-2 text-xs text-slate-400">Physical: ${s.physicalFeel || '-'} • Mental: ${s.mentalFeel || '-'}</div>`;
@@ -37,12 +38,12 @@ export function createSessionCard(s, isJournal) {
       <div class="flex items-center gap-4 mb-2">
         <div class="w-10 h-10 rounded-full flex items-center justify-center ${intensityColor}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
         <div class="flex-1">
-          <div class="flex justify-between items-baseline pr-6"><span class="text-white font-semibold">${escapeHTML(s.sessionType || s.type || 'Session')}</span><span class="text-slate-500 text-xs">${formatDate(s.date || s.createdAt)}</span></div>
+          <div class="flex justify-between items-baseline pr-6"><span class="text-white font-semibold">${escapeHTML(s.sessionType || s.type || 'Session')}${queuedBadge}</span><span class="text-slate-500 text-xs">${formatDate(s.date || s.createdAt)}</span></div>
           <div class="flex items-center gap-2 text-xs text-slate-400 mt-1"><span>${(s.duration || 0)}m</span><span>•</span><span>RPE ${s.intensity || '-'}/10</span></div>
-          ${!isJournal ? content : ''}
+          ${!isJournal ? summary : ''}
         </div>
       </div>
-      ${isJournal ? content : ''}
+      ${isJournal ? summary : ''}
       ${feelHtml}
       ${aiHtml}
     </div>`;
@@ -97,7 +98,10 @@ export function renderApp() {
   updateInsights(weeklyHrs);
   if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   document.querySelectorAll('.delete-btn').forEach(btn => { const clone = btn.cloneNode(true); btn.parentNode.replaceChild(clone, btn); });
-  document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { const id = btn.dataset.id; if (confirm('Delete this session?')) { const uid = state.currentUser?.uid; if (uid) deleteSessionFromDb(uid, id).catch(console.error); } }));
+  document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { const id = btn.dataset.id; if (confirm('Delete this session?')) { const uid = state.currentUser?.uid; if (uid) deleteSessionFromDb(uid, id).then(() => { // For queued deletes this updates UI immediately
+          state.sessions = (state.sessions || []).filter(s => s.id !== id);
+          renderApp();
+        }).catch(console.error); } }));
 }
 
 export function updateInsights(weeklyHrs) {
@@ -110,13 +114,64 @@ export function updateInsights(weeklyHrs) {
   const msgEl = document.getElementById('volume-msg'); if (msgEl) { if (weeklyHrs > 5) msgEl.innerText = '🔥 High volume week! Prioritize recovery and sleep.'; else if (weeklyHrs > 0) msgEl.innerText = 'Consistency is key. Good work this week.'; else msgEl.innerText = 'Time to get back on the mat.'; }
 }
 
+// Display sync indicator state. Exported so other modules (or import handlers) can update UI.
+export function updateSyncIndicator() {
+  const indicator = document.getElementById('sync-indicator');
+  if (!indicator) return;
+  const online = navigator.onLine;
+  if (!online) {
+    const qCount = getQueuedCount(state.currentUser?.uid);
+    const suffix = qCount ? ` · ${qCount} queued` : '';
+    indicator.innerHTML = `Offline — writes are queued${suffix} <button id="btn-sync-queued" class="ml-2 px-2 py-1 text-[10px] rounded bg-slate-700/80">Sync now</button>`;
+    indicator.className = 'fixed top-4 right-4 z-50 bg-yellow-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
+    return;
+  }
+  // online
+  if (typeof db !== 'undefined' && db) {
+    const qCount = getQueuedCount(state.currentUser?.uid);
+    const suffix = qCount ? ` · ${qCount} queued` : '';
+    indicator.innerHTML = `Online (Firestore + persistence)${suffix} <button id="btn-sync-queued" class="ml-2 px-2 py-1 text-[10px] rounded bg-slate-700/80">Sync now</button>`;
+    indicator.className = 'fixed top-4 right-4 z-50 bg-emerald-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
+  } else {
+    indicator.innerText = 'Online (Local only)';
+    indicator.className = 'fixed top-4 right-4 z-50 bg-slate-700/90 px-3 py-1 rounded-full text-xs text-slate-200 border border-slate-700';
+  }
+}
+
 export function initUI() {
   const fab = document.getElementById('fab'); if (fab) fab.addEventListener('click', () => switchView('log'));
   // Wire navigation buttons programmatically to remove inline onclick handlers
   document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => { const target = btn.dataset.target; if (target) switchView(target); }));
   // Wire any nav links (e.g., 'View All') which use data-target attributes
   document.querySelectorAll('.nav-link').forEach(lnk => lnk.addEventListener('click', () => { const target = lnk.dataset.target; if (target) switchView(target); }));
-  const logForm = document.getElementById('log-form'); if (logForm) { logForm.addEventListener('submit', async e => { e.preventDefault(); const uid = state.currentUser?.uid; if (!uid) return alert('You must be signed-in to log sessions'); const btn = e.target.querySelector('button'); const original = btn.innerHTML; btn.innerText = 'Saving...'; btn.disabled = true; const newData = { date: Date.now(), sessionType: document.getElementById('inp-type').value, duration: Number(document.getElementById('inp-duration').value), intensity: Number(document.getElementById('inp-intensity').value), physicalFeel: Number(document.getElementById('inp-physical').value), mentalFeel: Number(document.getElementById('inp-mental').value), notes: document.getElementById('inp-notes').value.trim(), aiSummary: '' }; try { await addSessionToDb(uid, newData); e.target.reset(); const dur = document.getElementById('inp-duration'); if (dur) dur.value = 90; const val = document.getElementById('val-intensity'); if (val) val.innerText = '5/10'; const pv = document.getElementById('val-physical'); if (pv) pv.innerText = '5/10'; const mv = document.getElementById('val-mental'); if (mv) mv.innerText = '7/10'; switchView('dashboard'); } catch (err) { alert('Error saving session'); console.error(err); } finally { btn.innerHTML = original; btn.disabled = false; } }); }
+  const logForm = document.getElementById('log-form');
+  if (logForm) {
+    logForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const uid = state.currentUser?.uid;
+      if (!uid) return alert('You must be signed-in to log sessions');
+      const btn = e.target.querySelector('button');
+      const original = btn.innerHTML;
+      btn.innerText = 'Saving...';
+      btn.disabled = true;
+      const newData = { date: Date.now(), sessionType: document.getElementById('inp-type').value, duration: Number(document.getElementById('inp-duration').value), intensity: Number(document.getElementById('inp-intensity').value), physicalFeel: Number(document.getElementById('inp-physical').value), mentalFeel: Number(document.getElementById('inp-mental').value), notes: document.getElementById('inp-notes').value.trim(), aiSummary: '' };
+      try {
+        const res = await addSessionToDb(uid, newData);
+        e.target.reset();
+        const dur = document.getElementById('inp-duration'); if (dur) dur.value = 90;
+        const val = document.getElementById('val-intensity'); if (val) val.innerText = '5/10';
+        const pv = document.getElementById('val-physical'); if (pv) pv.innerText = '5/10';
+        const mv = document.getElementById('val-mental'); if (mv) mv.innerText = '7/10';
+        if (res && res.queued) updateSyncIndicator();
+        switchView('dashboard');
+      } catch (err) {
+        alert('Error saving session');
+        console.error(err);
+      } finally {
+        btn.innerHTML = original; btn.disabled = false;
+      }
+    });
+  }
   const intensityInput = document.getElementById('inp-intensity'); if (intensityInput) intensityInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-intensity'); if (label) { label.innerText = `${val}/10`; label.className = `text-xs font-bold ${val <= 3 ? 'text-emerald-400' : val <= 7 ? 'text-amber-400' : 'text-red-500'}`; } });
   const physicalInput = document.getElementById('inp-physical'); if (physicalInput) physicalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-physical'); if (label) label.innerText = `${val}/10`; });
   const mentalInput = document.getElementById('inp-mental'); if (mentalInput) mentalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-mental'); if (label) label.innerText = `${val}/10`; });
@@ -137,8 +192,9 @@ export function initUI() {
       aiSummary: ''
     };
     try {
-      await addSessionToDb(uid, sample);
+      const res = await addSessionToDb(uid, sample);
       showToast('Sample log saved — check Journal');
+      if (res && res.queued) updateSyncIndicator();
       switchView('journal');
     } catch (err) {
       console.error('Sample save error', err);
@@ -146,30 +202,106 @@ export function initUI() {
     }
   });
 
+  // Import backup handling
+  const importBtn = document.getElementById('btn-import');
+  const importInput = document.getElementById('file-import');
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        const text = await f.text();
+        await handleImportText(text);
+      } catch (err) {
+        console.error('Import failed', err);
+        showToast('Import failed: ' + (err.message || err));
+      } finally { importInput.value = ''; }
+    });
+  }
+
   // Sync indicator: show network and Firestore persistence state
   const indicator = document.getElementById('sync-indicator');
-  function updateSyncIndicator() {
-    if (!indicator) return;
-    const online = navigator.onLine;
-    if (!online) {
-      indicator.innerText = 'Offline — writes are queued';
-      indicator.className = 'fixed top-4 right-4 z-50 bg-yellow-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
-      return;
-    }
-    // online
-    if (typeof db !== 'undefined' && db) {
-      indicator.innerText = 'Online (Firestore + persistence)';
-      indicator.className = 'fixed top-4 right-4 z-50 bg-emerald-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
-    } else {
-      indicator.innerText = 'Online (Local only)';
-      indicator.className = 'fixed top-4 right-4 z-50 bg-slate-700/90 px-3 py-1 rounded-full text-xs text-slate-200 border border-slate-700';
-    }
-  }
   // initial
   updateSyncIndicator();
   // update on change
   window.addEventListener('online', updateSyncIndicator);
   window.addEventListener('offline', updateSyncIndicator);
+  
+  // handle sync clicks
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest && e.target.closest('#btn-sync-queued');
+    if (!btn) return;
+    const uid = state.currentUser?.uid;
+    try {
+      btn.disabled = true; btn.innerText = 'Syncing...';
+      const res = await syncQueuedWrites(uid);
+      showToast(`Synced ${res.synced || 0} queued item(s)`);
+    } catch (err) {
+      console.error('Sync queued writes failed', err);
+      showToast('Sync failed: ' + (err.message || err));
+    } finally { btn.disabled = false; updateSyncIndicator(); }
+  }, true);
+}
+
+// Map a legacy practice object (from backup JSON) into the app session payload shape
+function mapPracticeToSession(p) {
+  return {
+    date: p.date ? (typeof p.date === 'number' ? p.date : (Date.parse(p.date) || Date.now())) : Date.now(),
+    sessionType: p.type || p.sessionType || 'Practice',
+    duration: Number(p.duration || 0),
+    intensity: Number(p.intensity || 0),
+    physicalFeel: Number(p.physical || p.physicalFeel || 0),
+    mentalFeel: Number(p.mental || p.mentalFeel || 0),
+    notes: p.notes || '',
+    aiSummary: p.storyGenerated || p.story || p.aiSummary || '',
+    legacyId: p.id || null,
+    practiceNumber: p.practiceNumber || null,
+    importedFromBackup: true
+  };
+}
+
+async function handleImportText(text) {
+  let json;
+  try { json = JSON.parse(text); } catch (err) { throw new Error('Invalid JSON file'); }
+  const practices = json.practices || json.practicesList || json.practices || [];
+  if (!Array.isArray(practices) || !practices.length) throw new Error('No practices array found in backup');
+  const uid = state.currentUser?.uid;
+  if (!uid) { showToast('Please sign-in before importing'); return; }
+  let imported = 0, skipped = 0, errors = 0;
+  for (const p of practices) {
+    try {
+      const mapped = mapPracticeToSession(p);
+      // dedupe by legacyId if available
+      if (mapped.legacyId && (state.sessions || []).some(s => s.legacyId && String(s.legacyId) === String(mapped.legacyId))) { skipped++; continue; }
+      // dedupe by date + duration as fallback
+      const match = (state.sessions || []).some(s => {
+        const sDate = s.date?.toDate ? s.date.toDate().getTime() : (typeof s.date === 'number' ? s.date : (Date.parse(s.date) || 0));
+        const mDate = mapped.date;
+        return sDate === mDate && (s.duration || 0) === mapped.duration && String((s.notes || '').slice(0,40)) === String((mapped.notes || '').slice(0,40));
+      });
+      if (match) { skipped++; continue; }
+      await addSessionToDb(uid, mapped);
+      imported++;
+    } catch (err) {
+      console.error('Import item failed', err, p);
+      errors++;
+    }
+  }
+  // If online, try to flush queued writes immediately
+  if (navigator.onLine) {
+    try {
+      const res = await syncQueuedWrites(uid);
+      if (res && res.synced) showToast(`Synced ${res.synced} queued items after import`, 5000);
+    } catch (err) {
+      console.warn('Post-import sync failed', err);
+    }
+  }
+  // Update UI and show toast
+  const msg = `Imported ${imported} / Skipped ${skipped} / Errors ${errors}`;
+  showToast(msg, 6000);
+  // Trigger sync indicator updates
+  updateSyncIndicator();
 }
 
 // Toast helper
