@@ -1,6 +1,11 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb, syncQueuedWrites, getQueuedCount } from './storage.js';
 
 export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
+
+function escapeHTML(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
 let charts = { volume: null, types: null }; // Store chart instances
 
 // --- Navigation & View Management ---
@@ -140,16 +145,16 @@ function createSessionCard(s, isJournal) {
         </div>
         <div class="flex-1 min-w-0">
             <div class="flex justify-between items-start">
-                <h4 class="font-bold text-white truncate">${type} ${s.queued ? '<span class="ml-2 text-[10px] font-bold uppercase text-amber-400">Queued</span>' : ''}</h4>
+                <h4 class="font-bold text-white truncate">${escapeHTML(type)} ${s.queued ? '<span class="ml-2 text-[10px] font-bold uppercase text-amber-400">Queued</span>' : ''}</h4>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${dateStr}</span>
             </div>
             <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                <span class="font-mono text-amber-500">${s.duration}m</span>
+                <span class="font-mono text-amber-500">${Number(s.duration) || 0}m</span>
                 <span class="w-1 h-1 rounded-full bg-slate-600"></span>
-                <span>RPE ${s.intensity}/10</span>
+                <span>RPE ${Number(s.intensity) || 0}/10</span>
                 <span class="ml-auto text-[10px] text-slate-600">${relTime}</span>
             </div>
-            ${s.notes && isJournal ? `<div class="mt-3 text-sm text-slate-300 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50 leading-relaxed"><div class="card-notes">${s.notes}</div>${(s.notes.length > 220 ? `<div class="mt-2 text-right"><span class="read-more" data-id="${s.id}">Read more</span></div>` : '')}</div>` : ''}
+            ${s.notes && isJournal ? `<div class="mt-3 text-sm text-slate-300 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50 leading-relaxed"><div class="card-notes">${escapeHTML(s.notes)}</div>${(s.notes.length > 220 ? `<div class="mt-2 text-right"><span class="read-more" data-id="${escapeHTML(s.id)}">Read more</span></div>` : '')}</div>` : ''}
         </div>
         ${isJournal ? `<button class="delete-btn absolute top-4 right-4 text-slate-600 hover:text-red-500 p-1" data-id="${s.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
     </div>`;
