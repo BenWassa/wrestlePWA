@@ -150,10 +150,11 @@ function renderHeatmap(sessions) {
         el.setAttribute('data-count', String(count));
         el.setAttribute('aria-label', title);
 
-        // Color logic
+        // Color logic - more granular for clarity
         if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
-        else if (count === 1) el.style.backgroundColor = '#0d9488'; // teal-600
-        else el.style.backgroundColor = '#f59e0b'; // amber-500
+        else if (count === 1) el.style.backgroundColor = '#14b8a6'; // teal-500
+        else if (count === 2) el.style.backgroundColor = '#f59e0b'; // amber-500
+        else el.style.backgroundColor = '#fb7185'; // rose-500
 
         // let rows align horizontally by week via CSS grid styling on heatmap-grid
         grid.appendChild(el);
@@ -531,11 +532,13 @@ export function initUI() {
         const settingsClose = document.getElementById('settings-close');
         const inpEnablePing = document.getElementById('inp-enable-ping');
         // Persist the setting in localStorage
-        if (inpEnablePing) {
-            const stored = localStorage.getItem('enable_ping') === 'true';
-            inpEnablePing.checked = stored;
-            inpEnablePing.addEventListener('change', e => { localStorage.setItem('enable_ping', e.target.checked ? 'true' : 'false'); updateSyncIndicator(); });
-        }
+            if (inpEnablePing) {
+                // Default to 'true' (online by default) unless explictly changed by user
+                if (localStorage.getItem('enable_ping') === null) { localStorage.setItem('enable_ping', 'true'); }
+                const stored = localStorage.getItem('enable_ping') === 'true';
+                inpEnablePing.checked = stored;
+                inpEnablePing.addEventListener('change', e => { localStorage.setItem('enable_ping', e.target.checked ? 'true' : 'false'); updateSyncIndicator(); });
+            }
         btnSettings?.addEventListener('click', () => panelSettings?.classList.remove('hidden'));
         settingsClose?.addEventListener('click', () => panelSettings?.classList.add('hidden'));
 }
@@ -552,12 +555,14 @@ function showToast(msg) {
 // Sync Indicator Logic
 export async function updateSyncIndicator() {
     const ind = document.getElementById('sync-indicator');
-    let networkOnline = navigator.onLine;
-    const queued = getQueuedCount(state.currentUser?.uid);
+    // Treat as online by default if Firestore/DB is available; this keeps the app 'live' by default as requested
     const firestoreAvailable = (typeof db !== 'undefined' && db);
+    let networkOnline = navigator.onLine || !!firestoreAvailable;
+    const queued = getQueuedCount(state.currentUser?.uid);
     // If ping is enabled, verify network reachability for a more accurate state
     try {
         const pingEnabled = localStorage.getItem('enable_ping') === 'true';
+        // If ping is enabled, refine status via fetch; otherwise rely on the above default
         if (pingEnabled && networkOnline) {
             const ok = await doPing();
             networkOnline = !!ok;
