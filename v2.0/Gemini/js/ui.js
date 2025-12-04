@@ -65,6 +65,15 @@ function formatDate(ts) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
 }
 
+// Return a JS Date for a session preferring the user-attested 'date' field
+function getSessionDateObj(s) {
+    if (!s) return new Date(0);
+    // Prefer s.date when present (legacy, user-attested date)
+    if (s.date) return (s.date.toDate ? s.date.toDate() : new Date(s.date));
+    if (s.createdAt) return (s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt));
+    return new Date(0);
+}
+
 function getRelativeTime(ts) {
     const d = ts.toDate ? ts.toDate() : new Date(ts);
     const diff = Date.now() - d.getTime();
@@ -87,7 +96,7 @@ function renderHeatmap(sessions) {
     
     // Populate session counts per day
     sessions.forEach(s => {
-        const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.date);
+        const d = getSessionDateObj(s);
         const key = d.toISOString().split('T')[0];
         dateMap.set(key, (dateMap.get(key) || 0) + 1);
     });
@@ -135,8 +144,9 @@ function createSessionCard(s, isJournal) {
     else if (type.includes('Conditioning')) { iconName = 'heart-pulse'; colorClass = 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'; }
     else if (type.includes('Practice')) { iconName = 'users'; colorClass = 'text-amber-400 bg-amber-400/10 border-amber-400/20'; }
 
-    const dateStr = formatDate(s.date || s.createdAt);
-    const relTime = getRelativeTime(s.date || s.createdAt);
+    const dateObj = getSessionDateObj(s);
+    const dateStr = formatDate(dateObj);
+    const relTime = getRelativeTime(dateObj);
 
     return `
     <div class="relative bg-slate-900 rounded-2xl p-4 border border-slate-800 flex items-start gap-4">
@@ -165,8 +175,8 @@ function createSessionCard(s, isJournal) {
 export function renderApp() {
     // Basic sorting
     const sessions = (state.sessions || []).slice().sort((a,b) => {
-        const dA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date);
-        const dB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date);
+        const dA = getSessionDateObj(a);
+        const dB = getSessionDateObj(b);
         return dB - dA;
     });
 
@@ -207,7 +217,7 @@ export function renderApp() {
 
     // Weekly Stats
     const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate()-7);
-    const weeklySess = sessions.filter(s => (s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.date)) > oneWeekAgo);
+    const weeklySess = sessions.filter(s => (getSessionDateObj(s)) > oneWeekAgo);
     const weeklyHrs = weeklySess.reduce((a,c) => a + (Number(c.duration)||0), 0) / 60;
     const avgInt = weeklySess.length ? (weeklySess.reduce((a,c)=>a+(Number(c.intensity)||0),0)/weeklySess.length).toFixed(1) : '0.0';
     
