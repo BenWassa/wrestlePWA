@@ -261,9 +261,12 @@ export function renderApp() {
     const weeklySess = sessions.filter(s => (getSessionDateObj(s)) > oneWeekAgo);
     const weeklyHrs = weeklySess.reduce((a,c) => a + (Number(c.duration)||0), 0) / 60;
     const avgInt = weeklySess.length ? (weeklySess.reduce((a,c)=>a+(Number(c.intensity)||0),0)/weeklySess.length).toFixed(1) : '0.0';
+    // Weekly streak value
+    const weeklyStreak = computeWeeklyStreak(sessions);
     
     document.getElementById('weekly-hours').innerHTML = `${weeklyHrs.toFixed(1)}<span class="text-sm font-medium text-slate-500 ml-1">hrs</span>`;
-    document.getElementById('avg-intensity').innerHTML = `${avgInt}<span class="text-sm font-medium text-slate-500 ml-1">/10</span>`;
+    const weeklyEl = document.getElementById('weekly-streak');
+    if (weeklyEl) weeklyEl.innerHTML = `${weeklyStreak}<span class="text-sm font-medium text-slate-500 ml-1">weeks</span>`;
 
     // Re-bind Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -288,6 +291,16 @@ export function renderApp() {
 
     // Update Date in Header
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function computeWeeklyStreak(sessions) {
+    const dateMap = new Map();
+    sessions.forEach(s => { const d = getSessionDateObj(s); const key = d.toISOString().split('T')[0]; dateMap.set(key, (dateMap.get(key) || 0) + 1); });
+    const weekSet = new Set();
+    for (const k of dateMap.keys()) { const day = new Date(k); const sunday = new Date(day); sunday.setDate(sunday.getDate() - sunday.getDay()); weekSet.add(sunday.toISOString().split('T')[0]); }
+    let weeklyStreak = 0; const today = new Date(); const thisSunday = new Date(today); thisSunday.setDate(thisSunday.getDate() - thisSunday.getDay()); let checkWeek = new Date(thisSunday);
+    while (true) { const k = checkWeek.toISOString().split('T')[0]; if (weekSet.has(k)) weeklyStreak++; else break; checkWeek.setDate(checkWeek.getDate() - 7); if (weeklyStreak > 52) break; }
+    return weeklyStreak;
 }
 
 // Modal actions
