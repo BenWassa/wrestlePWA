@@ -1,7 +1,7 @@
 import { db, appId, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, where, serverTimestamp } from './firebase.js';
 
 export function watchSessions(uid, onUpdate, onError) {
-  if (!db) return () => {};
+  if (!db || !uid) { if (onUpdate) onUpdate([]); return () => {}; }
   // Use a flat 'logs' collection and filter by ownerId to support cross-user analytics / simple schema
   const q = query(collection(db, 'logs'), where('ownerId', '==', uid), orderBy('date', 'desc'));
   return onSnapshot(q, snapshot => {

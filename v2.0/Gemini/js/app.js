@@ -39,11 +39,12 @@ export async function init() {
 
     if (user) {
       state.currentUser = user;
-      unsubscribeWatcher = watchSessions(user.uid, (data) => { state.sessions = data; renderApp(); }, (err) => console.error(err));
+      unsubscribeWatcher = watchSessions(user.uid, (data) => { state.sessions = data; state.firestoreError = null; renderApp(); }, (err) => { console.error('watchSessions error', err); state.firestoreError = err.message || String(err); renderApp(); });
       document.getElementById('loading-screen').classList.add('hidden');
     } else {
       state.currentUser = null;
       state.sessions = [];
+      state.firestoreError = null;
       renderApp();
       document.getElementById('loading-screen').classList.add('hidden');
     }

@@ -1,7 +1,7 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb } from './storage.js';
 import { db } from './firebase.js';
 
-export let state = { currentUser: null, sessions: [], authError: null };
+export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
 
 export function switchView(viewName) {
   ['dashboard', 'log', 'journal', 'insights'].forEach(v => {
@@ -54,6 +54,13 @@ export function renderApp() {
   if (authBanner) {
     if (state.authError) { authBanner.classList.remove('hidden'); authBanner.innerText = `Auth error: ${state.authError}. Your logs will be saved locally.`; }
     else { authBanner.classList.add('hidden'); authBanner.innerText = ''; }
+  }
+
+  // Show Firestore error banner if present
+  const firestoreBanner = document.getElementById('firestore-error-banner');
+  if (firestoreBanner) {
+    if (state.firestoreError) { firestoreBanner.classList.remove('hidden'); firestoreBanner.innerText = `Firestore error: ${state.firestoreError}`; }
+    else { firestoreBanner.classList.add('hidden'); firestoreBanner.innerText = ''; }
   }
   const sessionsArr = (state.sessions || []).slice();
   sessionsArr.sort((a,b) => { const aDt = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date || 0); const bDt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date || 0); return bDt - aDt; });
