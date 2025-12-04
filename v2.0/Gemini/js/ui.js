@@ -1,316 +1,495 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb, syncQueuedWrites, getQueuedCount } from './storage.js';
-import { db } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
+let charts = { volume: null, types: null }; // Store chart instances
+
+// --- Navigation & View Management ---
 
 export function switchView(viewName) {
+  // Hide all views
   ['dashboard', 'log', 'journal', 'insights'].forEach(v => {
-    const el = document.getElementById(`view-${v}`);
-    if (el) el.classList.add('hidden');
+    document.getElementById(`view-${v}`)?.classList.add('hidden');
   });
+
+  // Show target
   const target = document.getElementById(`view-${viewName}`);
-  if (target) target.classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.className = `nav-btn group flex flex-col items-center justify-center w-full h-full ${btn.dataset.target === viewName ? 'text-amber-500' : 'text-slate-500 hover:text-slate-400'}`);
-  const fab = document.getElementById('fab'); if (fab) viewName === 'log' ? fab.classList.add('hidden') : fab.classList.remove('hidden');
-  const app = document.getElementById('app-container'); if (app) app.scrollTop = 0;
+  if (target) {
+      target.classList.remove('hidden');
+      window.scrollTo(0,0);
+  }
+
+  // Update Nav State
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+      const isActive = btn.dataset.target === viewName;
+      btn.className = `nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
+  });
+
+  // FAB logic
+  const fab = document.getElementById('fab');
+  if (fab) viewName === 'log' ? fab.classList.add('hidden') : fab.classList.remove('hidden');
+
+  // Specific render triggers
+  if (viewName === 'insights') renderCharts();
 }
 
-window.switchView = switchView;
+// --- Data & Visual Formatting ---
 
-export function formatDate(ts) { if (!ts) return ''; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+const LEVELS = [
+    { name: 'Rookie', hours: 0, color: '#94a3b8' },
+    { name: 'Varsity', hours: 20, color: '#34d399' },
+    { name: 'State Champ', hours: 100, color: '#60a5fa' },
+    { name: 'All-American', hours: 300, color: '#f59e0b' },
+    { name: 'Olympian', hours: 1000, color: '#f43f5e' }
+];
 
-export function getLevel(hours) { if (hours < 10) return { name: 'Rookie', color: 'text-slate-400', next: 10 }; if (hours < 50) return { name: 'Prospect', color: 'text-emerald-400', next: 50 }; if (hours < 150) return { name: 'Contender', color: 'text-blue-400', next: 150 }; if (hours < 500) return { name: 'State Champ', color: 'text-amber-400', next: 500 }; return { name: 'All-American', color: 'text-rose-500', next: 1000 }; }
+function getLevelInfo(totalHours) {
+    let current = LEVELS[0];
+    let next = LEVELS[1];
+    for (let i = 0; i < LEVELS.length - 1; i++) {
+        if (totalHours >= LEVELS[i].hours) {
+            current = LEVELS[i];
+            next = LEVELS[i+1];
+        }
+    }
+    return { current, next };
+}
 
-function escapeHTML(s) { if (!s) return ''; return s.replace(/[&<>"]'/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatDate(ts) { 
+    if (!ts) return ''; 
+    const d = ts.toDate ? ts.toDate() : new Date(ts); 
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
+}
 
-export function createSessionCard(s, isJournal) {
-  const intensityColor = (s.intensity || 0) >= 8 ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500';
-  const icon = (s.intensity || 0) >= 8 ? 'activity' : 'dumbbell';
-  const deleteBtn = isJournal ? `<button data-id="${s.id}" class="delete-btn absolute top-4 right-4 text-slate-600 hover:text-red-500 transition-colors p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
-  const queuedBadge = s.queued ? `<span class="ml-2 inline-block text-[10px] px-2 py-0.5 rounded bg-yellow-600 text-slate-900 font-bold">Queued</span>` : '';
-  const notesHtml = s.notes ? `<div class="mt-2 text-slate-300 text-sm">${escapeHTML(s.notes)}</div>` : '';
-  const aiHtml = s.aiSummary ? `<div class="mt-2 text-slate-400 italic text-sm">AI: ${escapeHTML(s.aiSummary)}</div>` : '';
-  const feelHtml = `<div class="mt-2 text-xs text-slate-400">Physical: ${s.physicalFeel || '-'} • Mental: ${s.mentalFeel || '-'}</div>`;
-  const summary = isJournal ? `${notesHtml}` : `<div class="text-slate-400 text-sm truncate w-48">${escapeHTML(s.notes || 'No notes')}</div>`;
-  return `
-    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 relative ${isJournal ? '' : 'bg-slate-800/50'}">
-      ${deleteBtn}
-      <div class="flex items-center gap-4 mb-2">
-        <div class="w-10 h-10 rounded-full flex items-center justify-center ${intensityColor}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
-        <div class="flex-1">
-          <div class="flex justify-between items-baseline pr-6"><span class="text-white font-semibold">${escapeHTML(s.sessionType || s.type || 'Session')}${queuedBadge}</span><span class="text-slate-500 text-xs">${formatDate(s.date || s.createdAt)}</span></div>
-          <div class="flex items-center gap-2 text-xs text-slate-400 mt-1"><span>${(s.duration || 0)}m</span><span>•</span><span>RPE ${s.intensity || '-'}/10</span></div>
-          ${!isJournal ? summary : ''}
+function getRelativeTime(ts) {
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    const diff = Date.now() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return `${days}d ago`;
+}
+
+// --- Component Rendering ---
+
+function renderHeatmap(sessions) {
+    const grid = document.getElementById('heatmap-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    // Generate last 60 days
+    const today = new Date();
+    const dateMap = new Map();
+    
+    // Populate session counts per day
+    sessions.forEach(s => {
+        const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.date);
+        const key = d.toISOString().split('T')[0];
+        dateMap.set(key, (dateMap.get(key) || 0) + 1);
+    });
+
+    let streak = 0;
+    let checkDate = new Date();
+    // Calculate Streak
+    while (true) {
+        const k = checkDate.toISOString().split('T')[0];
+        if (dateMap.has(k)) streak++;
+        else if (checkDate.toDateString() !== new Date().toDateString()) break; 
+        checkDate.setDate(checkDate.getDate() - 1);
+        if (streak > 365) break; // safety
+    }
+    const streakEl = document.getElementById('streak-counter');
+    if (streakEl) streakEl.innerText = `${streak} Day Streak ${streak > 3 ? '🔥' : ''}`;
+
+    // Render Grid (Cols = weeks, Rows = days)
+    // Simplified: Just render 60 squares backwards
+    for (let i = 59; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const k = d.toISOString().split('T')[0];
+        const count = dateMap.get(k) || 0;
+        
+        const el = document.createElement('div');
+        el.className = 'heatmap-cell transition-all';
+        
+        // Color logic
+        if (count === 0) el.style.backgroundColor = '#1e293b'; // slate-800
+        else if (count === 1) el.style.backgroundColor = '#0d9488'; // teal-600
+        else el.style.backgroundColor = '#f59e0b'; // amber-500
+        
+        grid.appendChild(el);
+    }
+}
+
+function createSessionCard(s, isJournal) {
+    const type = s.sessionType || 'Practice';
+    // Icon Mapping
+    let iconName = 'dumbbell';
+    let colorClass = 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+    
+    if (type.includes('Live')) { iconName = 'swords'; colorClass = 'text-red-400 bg-red-400/10 border-red-400/20'; }
+    else if (type.includes('Conditioning')) { iconName = 'heart-pulse'; colorClass = 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'; }
+    else if (type.includes('Practice')) { iconName = 'users'; colorClass = 'text-amber-400 bg-amber-400/10 border-amber-400/20'; }
+
+    const dateStr = formatDate(s.date || s.createdAt);
+    const relTime = getRelativeTime(s.date || s.createdAt);
+
+    return `
+    <div class="relative bg-slate-900 rounded-2xl p-4 border border-slate-800 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center border ${colorClass}">
+            <i data-lucide="${iconName}" class="w-6 h-6"></i>
         </div>
-      </div>
-      ${isJournal ? summary : ''}
-      ${feelHtml}
-      ${aiHtml}
+        <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-start">
+                <h4 class="font-bold text-white truncate">${type} ${s.queued ? '<span class="ml-2 text-[10px] font-bold uppercase text-amber-400">Queued</span>' : ''}</h4>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${dateStr}</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                <span class="font-mono text-amber-500">${s.duration}m</span>
+                <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+                <span>RPE ${s.intensity}/10</span>
+                <span class="ml-auto text-[10px] text-slate-600">${relTime}</span>
+            </div>
+            ${s.notes && isJournal ? `<div class="mt-3 text-sm text-slate-300 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50 leading-relaxed"><div class="card-notes">${s.notes}</div>${(s.notes.length > 220 ? `<div class="mt-2 text-right"><span class="read-more" data-id="${s.id}">Read more</span></div>` : '')}</div>` : ''}
+        </div>
+        ${isJournal ? `<button class="delete-btn absolute top-4 right-4 text-slate-600 hover:text-red-500 p-1" data-id="${s.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
     </div>`;
 }
 
+// --- Main Render Function ---
+
 export function renderApp() {
-  // Show auth error banner if present
-  const authBanner = document.getElementById('auth-error-banner');
-  if (authBanner) {
-    if (state.authError) { authBanner.classList.remove('hidden'); authBanner.innerText = `Auth error: ${state.authError}. Your logs will be saved locally.`; }
-    else { authBanner.classList.add('hidden'); authBanner.innerText = ''; }
-  }
+    // Basic sorting
+    const sessions = (state.sessions || []).slice().sort((a,b) => {
+        const dA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date);
+        const dB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date);
+        return dB - dA;
+    });
 
-  // Show Firestore error banner if present
-  const firestoreBanner = document.getElementById('firestore-error-banner');
-  if (firestoreBanner) {
-    if (state.firestoreError) {
-      firestoreBanner.classList.remove('hidden');
-      // Remove previous content/children
-      firestoreBanner.textContent = '';
-      // Basic sanitized message
-      const msg = document.createElement('span');
-      msg.textContent = `Firestore error: ${state.firestoreError}`;
-      firestoreBanner.appendChild(msg);
-      // Try to find a firebase console link in the message and add an action link
-      const match = String(state.firestoreError).match(/https?:\/\/console\.firebase\.google\.com[^\s)"']+/i);
-      if (match) {
-        const a = document.createElement('a');
-        a.href = match[0];
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.className = 'underline text-red-300 ml-2';
-        a.textContent = 'Create required index';
-        firestoreBanner.appendChild(a);
-      }
-    } else {
-      firestoreBanner.classList.add('hidden'); firestoreBanner.textContent = '';
+    // Calc Totals
+    const totalMins = sessions.reduce((sum, s) => sum + (Number(s.duration)||0), 0);
+    const totalHrs = totalMins / 60;
+    
+    // Level System
+    const level = getLevelInfo(totalHrs);
+    const levelEl = document.getElementById('level-name');
+    if (levelEl) {
+        levelEl.innerText = level.current.name;
+        levelEl.style.color = level.current.name === 'Rookie' ? '#fff' : level.current.color;
     }
-  }
-  const sessionsArr = (state.sessions || []).slice();
-  sessionsArr.sort((a,b) => { const aDt = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.date || 0); const bDt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.date || 0); return bDt - aDt; });
-  const totalMins = sessionsArr.reduce((acc,s) => acc + (s.duration || 0), 0); const totalHrs = totalMins / 60; const level = getLevel(totalHrs);
-  const elLevelName = document.getElementById('level-name'); if (elLevelName) { elLevelName.innerText = level.name; elLevelName.className = `text-3xl font-black mb-2 ${level.color}`; }
-  const elTotalHours = document.getElementById('total-hours'); if (elTotalHours) elTotalHours.innerText = totalHrs.toFixed(1);
-  const elLevelProgress = document.getElementById('level-progress'); if (elLevelProgress) elLevelProgress.style.width = `${Math.min(100,(totalHrs/level.next)*100)}%`;
-  const elHoursCurrent = document.getElementById('hours-current'); if (elHoursCurrent) elHoursCurrent.innerText = `${Math.floor(totalHrs)} hrs`;
-  const elHoursNext = document.getElementById('hours-next'); if (elHoursNext) elHoursNext.innerText = `Next Rank: ${level.next} hrs`;
-  const elRecent = document.getElementById('recent-list'); if (elRecent) elRecent.innerHTML = sessionsArr.slice(0,3).map(s => createSessionCard(s,false)).join('');
-  const elJournal = document.getElementById('journal-list'); if (elJournal) elJournal.innerHTML = sessionsArr.length ? sessionsArr.map(s => createSessionCard(s,true)).join('') : '<div class="text-center text-slate-500 py-10">No sessions logged yet.</div>';
-  const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate()-7); const weeklySessions = sessionsArr.filter(s => { const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.date); return d > oneWeekAgo; });
-  const weeklyCountEl = document.getElementById('weekly-count'); if (weeklyCountEl) weeklyCountEl.innerText = weeklySessions.length; const weeklyHrs = weeklySessions.reduce((acc,s) => acc + (s.duration || 0), 0) / 60;
-  updateInsights(weeklyHrs);
-  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-  document.querySelectorAll('.delete-btn').forEach(btn => { const clone = btn.cloneNode(true); btn.parentNode.replaceChild(clone, btn); });
-  document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { const id = btn.dataset.id; if (confirm('Delete this session?')) { const uid = state.currentUser?.uid; if (uid) deleteSessionFromDb(uid, id).then(() => { // For queued deletes this updates UI immediately
-          state.sessions = (state.sessions || []).filter(s => s.id !== id);
-          renderApp();
-        }).catch(console.error); } }));
+    
+    // Progress Bar
+    const progressEl = document.getElementById('level-progress');
+    const nextText = document.getElementById('hours-next');
+    if (progressEl) {
+        const range = level.next.hours - level.current.hours;
+        const currentInLevel = totalHrs - level.current.hours;
+        const pct = Math.min(100, Math.max(0, (currentInLevel / range) * 100));
+        progressEl.style.width = `${pct}%`;
+        nextText.innerText = `${totalHrs.toFixed(1)} / ${level.next.hours} HRS`;
+    }
+    document.getElementById('total-hours').innerText = totalHrs.toFixed(1);
+
+    // Heatmap
+    renderHeatmap(sessions);
+
+    // Recent List (Top 3)
+    const recentList = document.getElementById('recent-list');
+    if (recentList) recentList.innerHTML = sessions.slice(0, 3).map(s => createSessionCard(s, false)).join('');
+
+    // Journal List (All)
+    const journalList = document.getElementById('journal-list');
+    if (journalList) journalList.innerHTML = sessions.map(s => createSessionCard(s, true)).join('');
+
+    // Weekly Stats
+    const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate()-7);
+    const weeklySess = sessions.filter(s => (s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.date)) > oneWeekAgo);
+    const weeklyHrs = weeklySess.reduce((a,c) => a + (Number(c.duration)||0), 0) / 60;
+    const avgInt = weeklySess.length ? (weeklySess.reduce((a,c)=>a+(Number(c.intensity)||0),0)/weeklySess.length).toFixed(1) : '0.0';
+    
+    document.getElementById('weekly-hours').innerHTML = `${weeklyHrs.toFixed(1)}<span class="text-sm font-medium text-slate-500 ml-1">hrs</span>`;
+    document.getElementById('avg-intensity').innerHTML = `${avgInt}<span class="text-sm font-medium text-slate-500 ml-1">/10</span>`;
+
+    // Re-bind Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Re-bind delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm('Delete log?')) deleteSessionFromDb(state.currentUser?.uid, btn.dataset.id).then(() => { state.sessions = (state.sessions || []).filter(s => s.id !== btn.dataset.id); renderApp(); }).catch(console.error);
+        };
+    });
+        // Re-bind read-more toggles
+        document.querySelectorAll('.read-more').forEach(lnk => {
+            const card = lnk.closest('.relative') || lnk.closest('.w-full');
+            lnk.onclick = (e) => {
+                e.stopPropagation();
+                const parent = lnk.closest('.relative') || lnk.closest('.w-full');
+                if (!parent) return;
+                parent.classList.toggle('card-expanded');
+                const node = parent.querySelector('.card-notes');
+                if (node) node.classList.toggle('line-clamp-none');
+                lnk.textContent = parent.classList.contains('card-expanded') ? 'Show less' : 'Read more';
+            };
+        });
+
+    // Update Date in Header
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-export function updateInsights(weeklyHrs) {
-  const fixCounts = {}; state.sessions.forEach(s => { if (s.notes) s.notes.split(/[,\.\n]/).forEach(p => { const key = p.trim().toLowerCase(); if (key.length > 3) fixCounts[key] = (fixCounts[key] || 0) + 1; }); });
-  const topFixes = Object.entries(fixCounts).sort((a,b) => b[1]-a[1]).slice(0,3);
-  const insightCountEl = document.getElementById('insight-count'); if (insightCountEl) insightCountEl.innerText = topFixes.length;
-  const container = document.getElementById('insights-content'); if (container) container.innerHTML = topFixes.length ? `<p class="text-indigo-100 text-sm mb-3">Pattern found in your "Notes". Focus on these:</p><ul class="space-y-3">${topFixes.map(([t,c]) => `<li class="bg-indigo-950/50 p-3 rounded-lg flex justify-between items-center border border-indigo-500/20"><span class="text-indigo-200 font-medium capitalize">${escapeHTML(t)}</span><span class="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">Reported ${c}x</span></li>`).join('')}</ul>` : `<p class="text-indigo-200 text-sm italic">Add more notes to get better insights.</p>`;
-  const avgEl = document.getElementById('avg-intensity'); if (avgEl) avgEl.innerText = `${(state.sessions.slice(0,5).reduce((a,c)=>a+(c.intensity||0),0) / Math.min(5, Math.max(1, state.sessions.length))).toFixed(1)} / 10`;
-  const weeklyHoursEl = document.getElementById('weekly-hours'); if (weeklyHoursEl) weeklyHoursEl.innerText = `${weeklyHrs.toFixed(1)} hrs`;
-  const msgEl = document.getElementById('volume-msg'); if (msgEl) { if (weeklyHrs > 5) msgEl.innerText = '🔥 High volume week! Prioritize recovery and sleep.'; else if (weeklyHrs > 0) msgEl.innerText = 'Consistency is key. Good work this week.'; else msgEl.innerText = 'Time to get back on the mat.'; }
+// --- Chart.js Integration ---
+
+function renderCharts() {
+    const ctxVol = document.getElementById('chart-volume')?.getContext('2d');
+    const ctxType = document.getElementById('chart-types')?.getContext('2d');
+    
+    if (!ctxVol || !ctxType) return;
+    
+    // Destroy old instances
+    if (charts.volume) charts.volume.destroy();
+    if (charts.types) charts.types.destroy();
+
+    const data = (state.sessions || []).slice(0, 10).reverse(); // Last 10 sessions
+    
+    // 1. Volume vs Intensity (Mixed Chart)
+    charts.volume = new Chart(ctxVol, {
+        type: 'bar',
+        data: {
+            labels: data.map(s => formatDate(s.date || s.createdAt)),
+            datasets: [
+                {
+                    label: 'Duration (m)',
+                    data: data.map(s => s.duration),
+                    backgroundColor: 'rgba(245, 158, 11, 0.5)',
+                    borderRadius: 4,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: 'Intensity',
+                    data: data.map(s => s.intensity),
+                    borderColor: '#38bdf8', // Sky 400
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0f172a',
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { display: false },
+                y1: { display: false, min: 0, max: 10 }
+            }
+        }
+    });
+
+    // 2. Type Distribution (Doughnut)
+    const typeCounts = {};
+    state.sessions.forEach(s => { 
+        const t = s.sessionType || 'Practice';
+        typeCounts[t] = (typeCounts[t] || 0) + 1; 
+    });
+    
+    charts.types = new Chart(ctxType, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(typeCounts),
+            datasets: [{
+                data: Object.values(typeCounts),
+                backgroundColor: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Update Mat IQ (Volume x Intensity / 100)
+    const totalScore = state.sessions.reduce((acc, s) => acc + ((s.duration || 0) * (s.intensity || 0)), 0);
+    const matIq = Math.floor(totalScore / 100);
+    document.getElementById('mat-iq').innerText = matIq;
 }
 
-// Display sync indicator state. Exported so other modules (or import handlers) can update UI.
-export function updateSyncIndicator() {
-  const indicator = document.getElementById('sync-indicator');
-  if (!indicator) return;
-  const online = navigator.onLine;
-  if (!online) {
-    const qCount = getQueuedCount(state.currentUser?.uid);
-    const suffix = qCount ? ` · ${qCount} queued` : '';
-    indicator.innerHTML = `Offline — writes are queued${suffix} <button id="btn-sync-queued" class="ml-2 px-2 py-1 text-[10px] rounded bg-slate-700/80">Sync now</button>`;
-    indicator.className = 'fixed top-4 right-4 z-50 bg-yellow-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
-    return;
-  }
-  // online
-  if (typeof db !== 'undefined' && db) {
-    const qCount = getQueuedCount(state.currentUser?.uid);
-    const suffix = qCount ? ` · ${qCount} queued` : '';
-    indicator.innerHTML = `Online (Firestore + persistence)${suffix} <button id="btn-sync-queued" class="ml-2 px-2 py-1 text-[10px] rounded bg-slate-700/80">Sync now</button>`;
-    indicator.className = 'fixed top-4 right-4 z-50 bg-emerald-600/90 px-3 py-1 rounded-full text-xs text-slate-900 border border-slate-700';
-  } else {
-    indicator.innerText = 'Online (Local only)';
-    indicator.className = 'fixed top-4 right-4 z-50 bg-slate-700/90 px-3 py-1 rounded-full text-xs text-slate-200 border border-slate-700';
-  }
-}
+
+// --- Initialization ---
 
 export function initUI() {
-  const fab = document.getElementById('fab'); if (fab) fab.addEventListener('click', () => switchView('log'));
-  // Wire navigation buttons programmatically to remove inline onclick handlers
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => { const target = btn.dataset.target; if (target) switchView(target); }));
-  // Wire any nav links (e.g., 'View All') which use data-target attributes
-  document.querySelectorAll('.nav-link').forEach(lnk => lnk.addEventListener('click', () => { const target = lnk.dataset.target; if (target) switchView(target); }));
-  const logForm = document.getElementById('log-form');
-  if (logForm) {
-    logForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const uid = state.currentUser?.uid;
-      if (!uid) return alert('You must be signed-in to log sessions');
-      const btn = e.target.querySelector('button');
-      const original = btn.innerHTML;
-      btn.innerText = 'Saving...';
-      btn.disabled = true;
-      const newData = { date: Date.now(), sessionType: document.getElementById('inp-type').value, duration: Number(document.getElementById('inp-duration').value), intensity: Number(document.getElementById('inp-intensity').value), physicalFeel: Number(document.getElementById('inp-physical').value), mentalFeel: Number(document.getElementById('inp-mental').value), notes: document.getElementById('inp-notes').value.trim(), aiSummary: '' };
-      try {
-        const res = await addSessionToDb(uid, newData);
-        e.target.reset();
-        const dur = document.getElementById('inp-duration'); if (dur) dur.value = 90;
-        const val = document.getElementById('val-intensity'); if (val) val.innerText = '5/10';
-        const pv = document.getElementById('val-physical'); if (pv) pv.innerText = '5/10';
-        const mv = document.getElementById('val-mental'); if (mv) mv.innerText = '7/10';
-        if (res && res.queued) updateSyncIndicator();
-        switchView('dashboard');
-      } catch (err) {
-        alert('Error saving session');
-        console.error(err);
-      } finally {
-        btn.innerHTML = original; btn.disabled = false;
-      }
-    });
-  }
-  const intensityInput = document.getElementById('inp-intensity'); if (intensityInput) intensityInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-intensity'); if (label) { label.innerText = `${val}/10`; label.className = `text-xs font-bold ${val <= 3 ? 'text-emerald-400' : val <= 7 ? 'text-amber-400' : 'text-red-500'}`; } });
-  const physicalInput = document.getElementById('inp-physical'); if (physicalInput) physicalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-physical'); if (label) label.innerText = `${val}/10`; });
-  const mentalInput = document.getElementById('inp-mental'); if (mentalInput) mentalInput.addEventListener('input', e => { const val = e.target.value; const label = document.getElementById('val-mental'); if (label) label.innerText = `${val}/10`; });
+    // Type Selection Logic in Form
+    const radios = document.querySelectorAll('input[name="stype"]');
+    radios.forEach(r => r.addEventListener('change', (e) => {
+        document.getElementById('inp-type').value = e.target.value;
+    }));
 
-  // Quick sample button for testing - creates a sample session
-  const sampleBtn = document.getElementById('btn-sample');
-  if (sampleBtn) sampleBtn.addEventListener('click', async () => {
-    const uid = state.currentUser?.uid;
-    if (!uid) { showToast('Sign in to test sample logging'); return; }
-    const sample = {
-      date: Date.now(),
-      sessionType: 'Practice',
-      duration: 60,
-      intensity: 6,
-      physicalFeel: 5,
-      mentalFeel: 6,
-      notes: 'Quick sample session created for testing',
-      aiSummary: ''
+    // Slider Live Updates
+    const durInput = document.getElementById('inp-duration');
+    durInput?.addEventListener('input', (e) => document.getElementById('val-duration').innerText = e.target.value);
+    
+    const intInput = document.getElementById('inp-intensity');
+    intInput?.addEventListener('input', (e) => document.getElementById('val-intensity').innerText = `${e.target.value}/10`);
+
+    // FAB
+    document.getElementById('fab')?.addEventListener('click', () => switchView('log'));
+
+    // Nav
+    document.querySelectorAll('.nav-btn, .nav-link').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.target));
+    });
+
+    // Form Submit
+    const form = document.getElementById('log-form');
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const uid = state.currentUser?.uid;
+        if (!uid) return;
+        
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> Saving...`;
+        
+        try {
+            await addSessionToDb(uid, {
+                date: Date.now(),
+                sessionType: document.getElementById('inp-type').value,
+                duration: Number(document.getElementById('inp-duration').value),
+                intensity: Number(document.getElementById('inp-intensity').value),
+                notes: document.getElementById('inp-notes').value.trim(),
+                createdAt: new Date() // handled by storage, but useful for optimistic UI
+            });
+            form.reset();
+            switchView('dashboard');
+            showToast('Session Logged!');
+        } catch(err) {
+            console.error(err);
+            alert('Save failed');
+        } finally {
+            btn.innerHTML = originalText;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    });
+
+    // Demo Button
+    document.getElementById('btn-sample')?.addEventListener('click', () => {
+        document.getElementById('inp-notes').value = "Worked on single leg entries. Felt good, but need more setup.";
+        document.getElementById('inp-duration').value = 120;
+        document.getElementById('val-duration').innerText = "120";
+    });
+    
+    // Import Logic (Preserved, upgraded)
+    const fileIn = document.getElementById('file-import');
+    document.getElementById('btn-import')?.addEventListener('click', () => fileIn.click());
+    fileIn?.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            const practices = json.practices || json.practicesList || [];
+            if (!practices.length) { showToast('No practices found in backup'); return; }
+            const uid = state.currentUser?.uid;
+            if (!uid) { showToast('Sign-in required for import'); return; }
+            // Read queued local writes for dedupe
+            let queuedLocal = [];
+            try { queuedLocal = JSON.parse(localStorage.getItem('wrestle-queue') || '[]'); } catch (err) { queuedLocal = []; }
+            let imported = 0, skipped = 0, errors = 0;
+            for (const p of practices) {
+                try {
+                    const mapped = {
+                        date: p.date ? (typeof p.date === 'number' ? p.date : Date.parse(p.date) || Date.now()) : Date.now(),
+                        sessionType: p.type || p.sessionType || 'Practice',
+                        duration: Number(p.duration || 0),
+                        intensity: Number(p.intensity || 0),
+                        physicalFeel: Number(p.physical || p.physicalFeel || 0),
+                        mentalFeel: Number(p.mental || p.mentalFeel || 0),
+                        notes: p.notes || '',
+                        aiSummary: p.storyGenerated || p.story || p.aiSummary || '',
+                        legacyId: p.id || null,
+                        practiceNumber: p.practiceNumber || null
+                    };
+                    // dedupe by legacyId
+                    if (mapped.legacyId) {
+                        const existsServer = (state.sessions || []).some(s => s.legacyId && String(s.legacyId) === String(mapped.legacyId));
+                        const existsQueued = queuedLocal.some(q => q.payload && q.payload.legacyId && String(q.payload.legacyId) === String(mapped.legacyId));
+                        if (existsServer || existsQueued) { skipped++; continue; }
+                    }
+                    // dedupe fallback by date/duration/notes
+                    const serverMatch = (state.sessions || []).some(s => {
+                        const sDate = s.date?.toDate ? s.date.toDate().getTime() : (typeof s.date === 'number' ? s.date : (Date.parse(s.date) || 0));
+                        const mDate = mapped.date;
+                        return sDate === mDate && (s.duration || 0) === mapped.duration && String((s.notes || '').slice(0,40)) === String((mapped.notes || '').slice(0,40));
+                    });
+                    const queuedMatch = queuedLocal.some(q => {
+                        const sDate = q.payload && (typeof q.payload.date === 'number' ? q.payload.date : (Date.parse(q.payload.date) || 0));
+                        const mDate = mapped.date;
+                        return sDate === mDate && (Number(q.payload.duration || 0) === mapped.duration) && String((q.payload.notes || '').slice(0,40)) === String((mapped.notes || '').slice(0,40));
+                    });
+                    if (serverMatch || queuedMatch) { skipped++; continue; }
+                    await addSessionToDb(uid, mapped);
+                    imported++;
+                } catch (err) { console.error('Import item failed', err); errors++; }
+            }
+            // Attempt to flush queue if online
+            if (navigator.onLine) {
+                try { const r = await syncQueuedWrites(state.currentUser.uid); if (r.synced) showToast(`Synced ${r.synced} queued items`); } catch (err) { console.warn('Post-import sync failed', err); }
+            }
+            showToast(`Imported ${imported} / Skipped ${skipped} / Errors ${errors}`);
+            updateSyncIndicator();
+        } catch (err) {
+            console.error('Import failed', err);
+            showToast('Import failed: ' + (err.message || 'invalid file'));
+        } finally {
+            fileIn.value = '';
+        }
+    });
+}
+
+// Toast Helper
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    const m = document.getElementById('toast-msg');
+    m.innerText = msg;
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+// Sync Indicator Logic
+export function updateSyncIndicator() {
+    const ind = document.getElementById('sync-indicator');
+    const networkOnline = navigator.onLine;
+    const queued = getQueuedCount(state.currentUser?.uid);
+    const firestoreAvailable = (typeof db !== 'undefined' && db);
+    if (!networkOnline) {
+        ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-[10px] font-bold text-slate-300">Network: OFFLINE</span><span class="ml-2 text-[10px] text-slate-400">Queued: ${queued}</span>`;
+    } else {
+        // Network online
+        const fireState = firestoreAvailable ? `<span class="text-emerald-400">Firestore</span>` : `<span class="text-slate-400">Local-only</span>`;
+        if (queued > 0) {
+            ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div><span class="text-[10px] font-bold text-amber-500">${fireState} · Sync queued: ${queued} (Click to sync)</span>`;
+            // Attempt a sync proactively
+            syncQueuedWrites(state.currentUser?.uid).then(res => {
+                if (res.synced) showToast(`${res.synced} items synced`);
+                updateSyncIndicator();
+            }).catch(err => { console.warn('Proactive sync failed', err); });
+        } else {
+            ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-[10px] font-bold text-slate-300">${fireState} · Live</span>`;
+        }
+    }
+    // Attach a click handler to trigger manual sync when there are queued items
+    ind.onclick = () => {
+        if (getQueuedCount(state.currentUser?.uid) > 0) {
+            ind.classList.add('opacity-60');
+            syncQueuedWrites(state.currentUser?.uid).then(res => { if (res.synced) showToast(`${res.synced} items synced`); updateSyncIndicator(); ind.classList.remove('opacity-60'); }).catch(err => { console.error('Manual sync failed', err); ind.classList.remove('opacity-60'); showToast('Sync failed'); });
+        }
     };
-    try {
-      const res = await addSessionToDb(uid, sample);
-      showToast('Sample log saved — check Journal');
-      if (res && res.queued) updateSyncIndicator();
-      switchView('journal');
-    } catch (err) {
-      console.error('Sample save error', err);
-      showToast('Error creating sample: ' + (err.message || err));
-    }
-  });
-
-  // Import backup handling
-  const importBtn = document.getElementById('btn-import');
-  const importInput = document.getElementById('file-import');
-  if (importBtn && importInput) {
-    importBtn.addEventListener('click', () => importInput.click());
-    importInput.addEventListener('change', async (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      try {
-        const text = await f.text();
-        await handleImportText(text);
-      } catch (err) {
-        console.error('Import failed', err);
-        showToast('Import failed: ' + (err.message || err));
-      } finally { importInput.value = ''; }
-    });
-  }
-
-  // Sync indicator: show network and Firestore persistence state
-  const indicator = document.getElementById('sync-indicator');
-  // initial
-  updateSyncIndicator();
-  // update on change
-  window.addEventListener('online', updateSyncIndicator);
-  window.addEventListener('offline', updateSyncIndicator);
-  
-  // handle sync clicks
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest && e.target.closest('#btn-sync-queued');
-    if (!btn) return;
-    const uid = state.currentUser?.uid;
-    try {
-      btn.disabled = true; btn.innerText = 'Syncing...';
-      const res = await syncQueuedWrites(uid);
-      showToast(`Synced ${res.synced || 0} queued item(s)`);
-    } catch (err) {
-      console.error('Sync queued writes failed', err);
-      showToast('Sync failed: ' + (err.message || err));
-    } finally { btn.disabled = false; updateSyncIndicator(); }
-  }, true);
 }
 
-// Map a legacy practice object (from backup JSON) into the app session payload shape
-function mapPracticeToSession(p) {
-  return {
-    date: p.date ? (typeof p.date === 'number' ? p.date : (Date.parse(p.date) || Date.now())) : Date.now(),
-    sessionType: p.type || p.sessionType || 'Practice',
-    duration: Number(p.duration || 0),
-    intensity: Number(p.intensity || 0),
-    physicalFeel: Number(p.physical || p.physicalFeel || 0),
-    mentalFeel: Number(p.mental || p.mentalFeel || 0),
-    notes: p.notes || '',
-    aiSummary: p.storyGenerated || p.story || p.aiSummary || '',
-    legacyId: p.id || null,
-    practiceNumber: p.practiceNumber || null,
-    importedFromBackup: true
-  };
-}
-
-async function handleImportText(text) {
-  let json;
-  try { json = JSON.parse(text); } catch (err) { throw new Error('Invalid JSON file'); }
-  const practices = json.practices || json.practicesList || json.practices || [];
-  if (!Array.isArray(practices) || !practices.length) throw new Error('No practices array found in backup');
-  const uid = state.currentUser?.uid;
-  if (!uid) { showToast('Please sign-in before importing'); return; }
-  let imported = 0, skipped = 0, errors = 0;
-  for (const p of practices) {
-    try {
-      const mapped = mapPracticeToSession(p);
-      // dedupe by legacyId if available
-      if (mapped.legacyId && (state.sessions || []).some(s => s.legacyId && String(s.legacyId) === String(mapped.legacyId))) { skipped++; continue; }
-      // dedupe by date + duration as fallback
-      const match = (state.sessions || []).some(s => {
-        const sDate = s.date?.toDate ? s.date.toDate().getTime() : (typeof s.date === 'number' ? s.date : (Date.parse(s.date) || 0));
-        const mDate = mapped.date;
-        return sDate === mDate && (s.duration || 0) === mapped.duration && String((s.notes || '').slice(0,40)) === String((mapped.notes || '').slice(0,40));
-      });
-      if (match) { skipped++; continue; }
-      await addSessionToDb(uid, mapped);
-      imported++;
-    } catch (err) {
-      console.error('Import item failed', err, p);
-      errors++;
-    }
-  }
-  // If online, try to flush queued writes immediately
-  if (navigator.onLine) {
-    try {
-      const res = await syncQueuedWrites(uid);
-      if (res && res.synced) showToast(`Synced ${res.synced} queued items after import`, 5000);
-    } catch (err) {
-      console.warn('Post-import sync failed', err);
-    }
-  }
-  // Update UI and show toast
-  const msg = `Imported ${imported} / Skipped ${skipped} / Errors ${errors}`;
-  showToast(msg, 6000);
-  // Trigger sync indicator updates
-  updateSyncIndicator();
-}
-
-// Toast helper
-export function showToast(msg, timeout = 3000) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), timeout);
-}
-
-window._GeminiState = state;
+// Global Listeners
+window.addEventListener('online', updateSyncIndicator);
+window.addEventListener('offline', updateSyncIndicator);
