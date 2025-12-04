@@ -186,14 +186,19 @@ function showLevelsModal() {
 
     container.innerHTML = html;
     modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
     
     // Refresh icons inside the modal
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // Close handlers
     const closeBtn = document.getElementById('close-levels');
-    closeBtn.onclick = () => modal.classList.add('hidden');
-    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+    };
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
 }
 
 // --- Component Rendering ---
@@ -431,12 +436,17 @@ export function showNoteModal(s) {
     document.getElementById('modal-note-date').innerText = formatDate(getSessionDateObj(s));
     document.getElementById('modal-note-content').innerText = s.notes || '';
     modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
     // wire actions
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+    };
     document.getElementById('modal-copy').onclick = () => { navigator.clipboard.writeText(s.notes || '').then(()=> showToast('Copied to clipboard')); };
     document.getElementById('modal-share').onclick = () => { if (navigator.share) navigator.share({ title: 'Practice note', text: s.notes || '' }).catch(err => showToast('Share failed')); else showToast('Share not supported'); };
-    document.getElementById('modal-close').onclick = () => modal.classList.add('hidden');
+    document.getElementById('modal-close').onclick = closeModal;
     // close when clicking overlay outside the content
-    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
 }
 
     // no duplicate action - removed per user request
