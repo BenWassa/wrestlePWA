@@ -67,23 +67,45 @@ export function switchView(viewName) {
 // --- Data & Visual Formatting ---
 
 const LEVELS = [
-    { name: 'Rookie', hours: 0, color: '#94a3b8', icon: 'footprints', desc: 'Step on the mat. Learn the stance.' },
-    { name: 'Varsity', hours: 20, color: '#34d399', icon: 'medal', desc: 'Building the gas tank. Learning the moves.' },
-    { name: 'State Champ', hours: 100, color: '#60a5fa', icon: 'trophy', desc: 'Dominating local competition.' },
-    { name: 'All-American', hours: 300, color: '#f59e0b', icon: 'flag', desc: 'Elite status. National recognition.' },
-    { name: 'Olympian', hours: 1000, color: '#f43f5e', icon: 'crown', desc: 'Legendary status. Master of the sport.' },
-    { name: 'Hall of Fame', hours: 2500, color: '#a78bfa', icon: 'star', desc: 'A lifetime dedicated to wrestling.' }
+    // The Beginning (0 - 1 Season)
+    { name: 'Fresh Fish', hours: 0, color: '#94a3b8', icon: 'footprints', desc: 'Step on the mat. Don\'t get pinned.' },
+    { name: 'Mat Rat', hours: 25, color: '#cbd5e1', icon: 'cookie', desc: 'Addicted to the grind. First month down.' },
+    { name: 'JV Warrior', hours: 50, color: '#64748b', icon: 'shield', desc: 'Learning the moves. Building the chin.' },
+    { name: 'Drill Partner', hours: 100, color: '#34d399', icon: 'users', desc: 'You are reliable. Technique is clicking.' },
+
+    // The Competitor (1 - 3 Seasons)
+    { name: 'Varsity Starter', hours: 200, color: '#10b981', icon: 'shirt', desc: 'You made the lineup. Now score points.' },
+    { name: 'Team Captain', hours: 350, color: '#059669', icon: 'award', desc: 'Leading the warmup. Setting the pace.' },
+    { name: 'Sectional Champ', hours: 500, color: '#0ea5e9', icon: 'medal', desc: 'Top of the area. Eye on the state tourney.' },
+
+    // The Elite (3+ Seasons / Year Round)
+    { name: 'State Qualifier', hours: 750, color: '#3b82f6', icon: 'map-pin', desc: 'One of the best in the state. Punch your ticket.' },
+    { name: 'State Placer', hours: 1000, color: '#6366f1', icon: 'podium', desc: 'Standing on the podium. All that work paid off.' },
+    { name: 'State Champ', hours: 1500, color: '#8b5cf6', icon: 'trophy', desc: 'Number one. The bracket is yours.' },
+
+    // The Legend (College / International Volume)
+    { name: 'All-American', hours: 2500, color: '#f59e0b', icon: 'flag', desc: 'National elite. Best of the best.' },
+    { name: 'Olympian', hours: 5000, color: '#f43f5e', icon: 'crown', desc: 'World class. A lifetime of discipline.' },
+    { name: 'Dan Gable', hours: 10000, color: '#ffe4e6', icon: 'flame', desc: 'Mythical status. You live on the mat.' }
 ];
 
 function getLevelInfo(totalHours) {
     let current = LEVELS[0];
-    let next = LEVELS[1];
-    for (let i = 0; i < LEVELS.length - 1; i++) {
+    let next = LEVELS[1]; // Default to second level
+    
+    for (let i = 0; i < LEVELS.length; i++) {
         if (totalHours >= LEVELS[i].hours) {
             current = LEVELS[i];
-            next = LEVELS[i+1];
+            // If there is a next level, set it. Otherwise, cap it at current.
+            next = LEVELS[i+1] ? LEVELS[i+1] : LEVELS[i]; 
         }
     }
+    
+    // Edge case: If we are at max level, avoid division by zero in progress bar
+    if (current === next) {
+        return { current, next: { ...current, hours: current.hours * 1.5, name: 'Max Level' } };
+    }
+
     return { current, next };
 }
 
