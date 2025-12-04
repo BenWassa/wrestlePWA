@@ -95,11 +95,11 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 /* Modal overlay */
-#modal-note, #panel-settings {
+#modal-note {
     backdrop-filter: blur(4px);
 }
 
-#modal-note .bg-slate-900, #panel-settings .bg-slate-900 {
+#modal-note .bg-slate-900 {
     max-height: 90vh;
     overflow-y: auto;
 }

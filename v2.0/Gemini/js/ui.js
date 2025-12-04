@@ -551,21 +551,8 @@ export function initUI() {
         }
     });
 
-        // Settings UI wiring
-        const btnSettings = document.getElementById('btn-settings');
-        const panelSettings = document.getElementById('panel-settings');
-        const settingsClose = document.getElementById('settings-close');
-        const inpEnablePing = document.getElementById('inp-enable-ping');
-        // Persist the setting in localStorage
-            if (inpEnablePing) {
-                // Default to 'true' (online by default) unless explictly changed by user
-                if (localStorage.getItem('enable_ping') === null) { localStorage.setItem('enable_ping', 'true'); }
-                const stored = localStorage.getItem('enable_ping') === 'true';
-                inpEnablePing.checked = stored;
-                inpEnablePing.addEventListener('change', e => { localStorage.setItem('enable_ping', e.target.checked ? 'true' : 'false'); updateSyncIndicator(); });
-            }
-        btnSettings?.addEventListener('click', () => panelSettings?.classList.remove('hidden'));
-        settingsClose?.addEventListener('click', () => panelSettings?.classList.add('hidden'));
+        // Settings: no visible UI; ensure ping default is enabled unless explicitly set
+        if (localStorage.getItem('enable_ping') === null) { localStorage.setItem('enable_ping', 'true'); }
         // Ensure the sync indicator reflects initial state
         updateSyncIndicator();
 }

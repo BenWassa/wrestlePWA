@@ -38,7 +38,6 @@
             <p id="current-date" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Loading...</p>
         </div>
         <div class="flex items-center gap-2">
-            <button id="btn-settings" class="text-slate-400 hover:text-slate-100 p-2 rounded bg-slate-900/20" title="Settings"><i data-lucide="settings" class="w-4 h-4"></i></button>
             <div id="sync-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800 backdrop-blur-sm transition-all">
             <div class="w-2 h-2 rounded-full bg-slate-500"></div>
             <span class="text-[10px] font-bold text-slate-400">OFFLINE</span>
@@ -326,25 +325,7 @@
         </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div id="panel-settings" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4">
-        <div class="bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <h3 class="text-lg font-bold text-white mb-4">Settings</h3>
-            <div class="flex items-center justify-between border-b border-slate-800 py-3">
-                <div>
-                    <div class="text-sm text-slate-300">Ping connectivity for better offline detection (default: ON)</div>
-                    <div class="text-xs text-slate-500">Enables a lightweight fetch to check true connectivity (opt-in)</div>
-                </div>
-                <label class="inline-flex items-center gap-2">
-                    <input id="inp-enable-ping" type="checkbox" class="form-checkbox" />
-                    <span class="text-sm text-slate-300">Enable</span>
-                </label>
-            </div>
-            <div class="mt-6 flex justify-end">
-                <button id="settings-close" class="px-4 py-2 rounded bg-slate-700 text-white">Close</button>
-            </div>
-        </div>
-    </div>
+    <!-- Settings panel removed: settings managed silently (ping ON by default) -->
     <div id="toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-xl z-[70] text-sm font-bold flex items-center gap-2 backdrop-blur-md">
         <i data-lucide="check-circle" class="w-4 h-4"></i>
         <span id="toast-msg">Success</span>
