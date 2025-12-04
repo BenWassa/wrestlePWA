@@ -110,7 +110,6 @@ function renderHeatmap(sessions) {
     grid.innerHTML = '';
     
     // Generate last 60 days
-    const today = new Date();
     const dateMap = new Map();
     
     // Populate session counts per day using session date
@@ -120,18 +119,29 @@ function renderHeatmap(sessions) {
         dateMap.set(key, (dateMap.get(key) || 0) + 1);
     });
 
-    let streak = 0;
-    let checkDate = new Date();
-    // Calculate Streak
+    // Weekly Streak: compute consecutive weeks (Sunday-starting) with any practice
+    const weekSet = new Set();
+    for (const k of dateMap.keys()) {
+        const day = new Date(k);
+        // normalize to week start (Sunday)
+        const sunday = new Date(day);
+        sunday.setDate(sunday.getDate() - sunday.getDay());
+        weekSet.add(sunday.toISOString().split('T')[0]);
+    }
+    let weeklyStreak = 0;
+    const today = new Date();
+    const thisSunday = new Date(today);
+    thisSunday.setDate(thisSunday.getDate() - thisSunday.getDay());
+    let checkWeek = new Date(thisSunday);
     while (true) {
-        const k = checkDate.toISOString().split('T')[0];
-        if (dateMap.has(k)) streak++;
-        else if (checkDate.toDateString() !== new Date().toDateString()) break; 
-        checkDate.setDate(checkDate.getDate() - 1);
-        if (streak > 365) break; // safety
+        const k = checkWeek.toISOString().split('T')[0];
+        if (weekSet.has(k)) weeklyStreak++;
+        else break;
+        checkWeek.setDate(checkWeek.getDate() - 7);
+        if (weeklyStreak > 52) break; // safety
     }
     const streakEl = document.getElementById('streak-counter');
-    if (streakEl) streakEl.innerText = `${streak} Day Streak ${streak > 3 ? '🔥' : ''}`;
+    if (streakEl) streakEl.innerText = `${weeklyStreak} Week Streak ${weeklyStreak > 3 ? '🔥' : ''}`;
 
     // Render Grid (Rows = weeks, Cols = days of week), last 60 days horizontally across rows
     const lastDates = [];
@@ -150,11 +160,9 @@ function renderHeatmap(sessions) {
         el.setAttribute('data-count', String(count));
         el.setAttribute('aria-label', title);
 
-        // Color logic - more granular for clarity
+        // Color logic - presence-only (don't emphasize multiple sessions per day)
         if (count === 0) el.style.backgroundColor = '#0f172a'; // slate-900
-        else if (count === 1) el.style.backgroundColor = '#14b8a6'; // teal-500
-        else if (count === 2) el.style.backgroundColor = '#f59e0b'; // amber-500
-        else el.style.backgroundColor = '#fb7185'; // rose-500
+        else el.style.backgroundColor = '#10b981'; // emerald-500 — presence
 
         // let rows align horizontally by week via CSS grid styling on heatmap-grid
         grid.appendChild(el);
