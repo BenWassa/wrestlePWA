@@ -1,10 +1,25 @@
 import { addSession as addSessionToDb, deleteSession as deleteSessionFromDb, syncQueuedWrites, getQueuedCount } from './storage.js';
+import { db } from './firebase.js';
 
 export let state = { currentUser: null, sessions: [], authError: null, firestoreError: null };
 
 function escapeHTML(s) {
     if (!s) return '';
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
+
+// Ping helper: attempt a quick fetch to a lightweight URL to confirm network reachability
+async function doPing(timeout = 2000, url = 'https://clients3.google.com/generate_204') {
+    try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        // Try to fetch; use no-cors to avoid CORS issues with 204 endpoints
+        await fetch(url, { method: 'GET', cache: 'no-cache', mode: 'no-cors', signal: controller.signal });
+        clearTimeout(id);
+        return true;
+    } catch (err) {
+        return false;
+    }
 }
 let charts = { volume: null, types: null }; // Store chart instances
 
@@ -34,7 +49,11 @@ export function switchView(viewName) {
   if (fab) viewName === 'log' ? fab.classList.add('hidden') : fab.classList.remove('hidden');
 
   // Specific render triggers
-  if (viewName === 'insights') renderCharts();
+    if (viewName === 'insights') {
+        const sel = document.getElementById('select-range');
+        const range = sel ? Number(sel.value) : 7;
+        renderCharts(range);
+    }
 }
 
 // --- Data & Visual Formatting ---
@@ -183,6 +202,9 @@ export function renderApp() {
     // Calc Totals
     const totalMins = sessions.reduce((sum, s) => sum + (Number(s.duration)||0), 0);
     const totalHrs = totalMins / 60;
+        // show last sync timestamp if present
+        const lastSync = localStorage.getItem('last_sync_at');
+        if (lastSync) { const el = document.getElementById('last-sync'); if (el) el.innerText = new Date(lastSync).toLocaleString(); }
     
     // Level System
     const level = getLevelInfo(totalHrs);
@@ -239,12 +261,9 @@ export function renderApp() {
             const card = lnk.closest('.relative') || lnk.closest('.w-full');
             lnk.onclick = (e) => {
                 e.stopPropagation();
-                const parent = lnk.closest('.relative') || lnk.closest('.w-full');
-                if (!parent) return;
-                parent.classList.toggle('card-expanded');
-                const node = parent.querySelector('.card-notes');
-                if (node) node.classList.toggle('line-clamp-none');
-                lnk.textContent = parent.classList.contains('card-expanded') ? 'Show less' : 'Read more';
+                const id = lnk.dataset.id;
+                const s = (state.sessions || []).find(x => String(x.id) === String(id));
+                if (s) showNoteModal(s);
             };
         });
 
@@ -252,9 +271,35 @@ export function renderApp() {
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+// Modal actions
+export function showNoteModal(s) {
+    const modal = document.getElementById('modal-note');
+    if (!modal) return;
+    document.getElementById('modal-note-type').innerText = s.sessionType || s.type || 'Practice';
+    document.getElementById('modal-note-date').innerText = formatDate(getSessionDateObj(s));
+    document.getElementById('modal-note-content').innerText = s.notes || '';
+    modal.classList.remove('hidden');
+    // wire actions
+    document.getElementById('modal-copy').onclick = () => { navigator.clipboard.writeText(s.notes || '').then(()=> showToast('Copied to clipboard')); };
+    document.getElementById('modal-share').onclick = () => { if (navigator.share) navigator.share({ title: 'Practice note', text: s.notes || '' }).catch(err => showToast('Share failed')); else showToast('Share not supported'); };
+    document.getElementById('modal-duplicate').onclick = () => { duplicateSessionToForm(s); modal.classList.add('hidden'); };
+    document.getElementById('modal-close').onclick = () => modal.classList.add('hidden');
+}
+
+function duplicateSessionToForm(s) {
+    // Prefill the log form and switch view
+    switchView('log');
+    document.getElementById('inp-type').value = s.sessionType || s.type || 'Practice';
+    document.getElementById('inp-duration').value = s.duration || 60; document.getElementById('val-duration').innerText = s.duration || 60;
+    document.getElementById('inp-intensity').value = s.intensity || 5; document.getElementById('val-intensity').innerText = `${s.intensity || 5}/10`;
+    document.getElementById('inp-physical').value = s.physicalFeel || s.physical || 5; document.getElementById('val-physical').innerText = `${s.physicalFeel || s.physical || 5}/10`;
+    document.getElementById('inp-mental').value = s.mentalFeel || s.mental || 5; document.getElementById('val-mental').innerText = `${s.mentalFeel || s.mental || 5}/10`;
+    document.getElementById('inp-notes').value = s.notes || '';
+}
+
 // --- Chart.js Integration ---
 
-function renderCharts() {
+function renderCharts(rangeDays = 7) {
     const ctxVol = document.getElementById('chart-volume')?.getContext('2d');
     const ctxType = document.getElementById('chart-types')?.getContext('2d');
     
@@ -264,17 +309,24 @@ function renderCharts() {
     if (charts.volume) charts.volume.destroy();
     if (charts.types) charts.types.destroy();
 
-    const data = (state.sessions || []).slice(0, 10).reverse(); // Last 10 sessions
+        // Filter sessions using session date (getSessionDateObj)
+        const allSessions = (state.sessions || []).slice().sort((a,b) => getSessionDateObj(b) - getSessionDateObj(a));
+        let filtered = allSessions;
+        if (rangeDays && Number(rangeDays) > 0) {
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - Number(rangeDays));
+            filtered = allSessions.filter(s => getSessionDateObj(s) >= cutoff);
+        }
+        const data = filtered.slice(0, 10).reverse(); // Last 10 sessions in range
     
     // 1. Volume vs Intensity (Mixed Chart)
     charts.volume = new Chart(ctxVol, {
         type: 'bar',
         data: {
-            labels: data.map(s => formatDate(s.date || s.createdAt)),
+            labels: data.map(s => formatDate(getSessionDateObj(s))),
             datasets: [
                 {
                     label: 'Duration (m)',
-                    data: data.map(s => s.duration),
+                    data: data.map(s => Number(s.duration) || 0),
                     backgroundColor: 'rgba(245, 158, 11, 0.5)',
                     borderRadius: 4,
                     yAxisID: 'y'
@@ -282,7 +334,7 @@ function renderCharts() {
                 {
                     type: 'line',
                     label: 'Intensity',
-                    data: data.map(s => s.intensity),
+                    data: data.map(s => Number(s.intensity) || 0),
                     borderColor: '#38bdf8', // Sky 400
                     borderWidth: 2,
                     tension: 0.4,
@@ -463,6 +515,20 @@ export function initUI() {
             fileIn.value = '';
         }
     });
+
+        // Settings UI wiring
+        const btnSettings = document.getElementById('btn-settings');
+        const panelSettings = document.getElementById('panel-settings');
+        const settingsClose = document.getElementById('settings-close');
+        const inpEnablePing = document.getElementById('inp-enable-ping');
+        // Persist the setting in localStorage
+        if (inpEnablePing) {
+            const stored = localStorage.getItem('enable_ping') === 'true';
+            inpEnablePing.checked = stored;
+            inpEnablePing.addEventListener('change', e => { localStorage.setItem('enable_ping', e.target.checked ? 'true' : 'false'); updateSyncIndicator(); });
+        }
+        btnSettings?.addEventListener('click', () => panelSettings?.classList.remove('hidden'));
+        settingsClose?.addEventListener('click', () => panelSettings?.classList.add('hidden'));
 }
 
 // Toast Helper
@@ -475,11 +541,19 @@ function showToast(msg) {
 }
 
 // Sync Indicator Logic
-export function updateSyncIndicator() {
+export async function updateSyncIndicator() {
     const ind = document.getElementById('sync-indicator');
-    const networkOnline = navigator.onLine;
+    let networkOnline = navigator.onLine;
     const queued = getQueuedCount(state.currentUser?.uid);
     const firestoreAvailable = (typeof db !== 'undefined' && db);
+    // If ping is enabled, verify network reachability for a more accurate state
+    try {
+        const pingEnabled = localStorage.getItem('enable_ping') === 'true';
+        if (pingEnabled && networkOnline) {
+            const ok = await doPing();
+            networkOnline = !!ok;
+        }
+    } catch (err) { /* ignore ping errors */ }
     if (!networkOnline) {
         ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-[10px] font-bold text-slate-300">Network: OFFLINE</span><span class="ml-2 text-[10px] text-slate-400">Queued: ${queued}</span>`;
     } else {
@@ -488,10 +562,12 @@ export function updateSyncIndicator() {
         if (queued > 0) {
             ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div><span class="text-[10px] font-bold text-amber-500">${fireState} · Sync queued: ${queued} (Click to sync)</span>`;
             // Attempt a sync proactively
-            syncQueuedWrites(state.currentUser?.uid).then(res => {
-                if (res.synced) showToast(`${res.synced} items synced`);
-                updateSyncIndicator();
-            }).catch(err => { console.warn('Proactive sync failed', err); });
+            const res = await syncQueuedWrites(state.currentUser?.uid).catch(err => { console.warn('Proactive sync failed', err); return { synced: 0 }; });
+            if (res && res.synced) {
+                showToast(`${res.synced} items synced`);
+                const now = new Date().toISOString(); localStorage.setItem('last_sync_at', now); document.getElementById('last-sync').innerText = new Date(now).toLocaleString();
+            }
+            updateSyncIndicator();
         } else {
             ind.innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-[10px] font-bold text-slate-300">${fireState} · Live</span>`;
         }
@@ -500,7 +576,20 @@ export function updateSyncIndicator() {
     ind.onclick = () => {
         if (getQueuedCount(state.currentUser?.uid) > 0) {
             ind.classList.add('opacity-60');
-            syncQueuedWrites(state.currentUser?.uid).then(res => { if (res.synced) showToast(`${res.synced} items synced`); updateSyncIndicator(); ind.classList.remove('opacity-60'); }).catch(err => { console.error('Manual sync failed', err); ind.classList.remove('opacity-60'); showToast('Sync failed'); });
+            (async () => {
+                try {
+                    const res = await syncQueuedWrites(state.currentUser?.uid);
+                    if (res.synced) {
+                        showToast(`${res.synced} items synced`);
+                        const now = new Date().toISOString(); localStorage.setItem('last_sync_at', now); document.getElementById('last-sync').innerText = new Date(now).toLocaleString();
+                    }
+                } catch (err) {
+                    console.error('Manual sync failed', err);
+                    showToast('Sync failed');
+                } finally {
+                    updateSyncIndicator(); ind.classList.remove('opacity-60');
+                }
+            })();
         }
     };
 }
@@ -508,3 +597,6 @@ export function updateSyncIndicator() {
 // Global Listeners
 window.addEventListener('online', updateSyncIndicator);
 window.addEventListener('offline', updateSyncIndicator);
+// Range selector for insights
+const selRange = document.getElementById('select-range');
+if (selRange) selRange.addEventListener('change', () => { const r = Number(selRange.value); renderCharts(r); });

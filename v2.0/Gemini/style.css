@@ -64,3 +64,13 @@ input[type=range]::-webkit-slider-runnable-track {
     font-weight: 700;
     font-size: 0.8rem;
 }
+
+/* Modal overlay */
+#modal-note, #panel-settings {
+    backdrop-filter: blur(4px);
+}
+
+#modal-note .bg-slate-900, #panel-settings .bg-slate-900 {
+    max-height: 90vh;
+    overflow-y: auto;
+}
