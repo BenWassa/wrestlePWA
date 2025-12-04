@@ -592,7 +592,11 @@ export async function updateSyncIndicator() {
         // If ping is enabled, refine status via fetch; otherwise rely on the above default
         if (pingEnabled && networkOnline) {
             const ok = await doPing();
-            networkOnline = !!ok;
+            if (!ok) {
+                // If ping fails but Firestore is present, prefer 'online' state per preference
+                if (!firestoreAvailable) networkOnline = false;
+                else ind.dataset.pingFailed = 'true';
+            }
         }
     } catch (err) { /* ignore ping errors */ }
     if (!networkOnline) {
