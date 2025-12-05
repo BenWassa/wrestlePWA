@@ -66,6 +66,7 @@ export function switchView(viewName) {
         const sel = document.getElementById('select-range');
         const range = sel ? Number(sel.value) : 7;
         renderCharts(range);
+        renderInsightsText(state.sessions, range);
     }
 }
 
@@ -549,6 +550,101 @@ function renderCharts(rangeDays = 7) {
     const totalScore = filtered.reduce((acc, s) => acc + ((Number(s.duration) || 0) * (Number(s.intensity) || 0)), 0);
     const matIq = Math.floor(totalScore / 100);
     document.getElementById('mat-iq').innerText = matIq;
+}
+
+// --- Text Insights Generation ---
+function renderInsightsText(sessions, rangeDays = 7) {
+    const container = document.getElementById('insights-content');
+    if (!container) return;
+
+    // Filter sessions by range
+    const allSessions = (sessions || []).slice().sort((a,b) => getSessionDateObj(b) - getSessionDateObj(a));
+    let filtered = allSessions;
+    if (rangeDays && Number(rangeDays) > 0) {
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - Number(rangeDays));
+        filtered = allSessions.filter(s => getSessionDateObj(s) >= cutoff);
+    }
+
+    if (!filtered.length) {
+        container.innerHTML = `<p class="text-slate-500">No sessions in this time range. Log some training to see insights!</p>`;
+        return;
+    }
+
+    // Calculate stats
+    const totalSessions = filtered.length;
+    const totalMinutes = filtered.reduce((a, s) => a + (Number(s.duration) || 0), 0);
+    const totalHours = (totalMinutes / 60).toFixed(1);
+    const avgDuration = Math.round(totalMinutes / totalSessions);
+    const avgIntensity = (filtered.reduce((a, s) => a + (Number(s.intensity) || 0), 0) / totalSessions).toFixed(1);
+
+    // Type breakdown
+    const typeCounts = {};
+    filtered.forEach(s => {
+        const t = s.sessionType || 'Practice';
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+    });
+    const favoriteType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+    // Most active day of week
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    filtered.forEach(s => {
+        const day = getSessionDateObj(s).getDay();
+        dayCounts[day]++;
+    });
+    const mostActiveDay = dayNames[dayCounts.indexOf(Math.max(...dayCounts))];
+
+    // Longest session
+    const longestSession = filtered.reduce((max, s) => (Number(s.duration) || 0) > (Number(max.duration) || 0) ? s : max, filtered[0]);
+    const longestDuration = longestSession ? (Number(longestSession.duration) || 0) : 0;
+
+    // High intensity sessions (7+)
+    const highIntensitySessions = filtered.filter(s => (Number(s.intensity) || 0) >= 7).length;
+    const highIntensityPct = Math.round((highIntensitySessions / totalSessions) * 100);
+
+    // Build insights HTML
+    const insights = [];
+    
+    insights.push(`<div class="flex items-start gap-3 mb-3">
+        <i data-lucide="activity" class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0"></i>
+        <p><span class="text-white font-semibold">${totalSessions} sessions</span> totaling <span class="text-white font-semibold">${totalHours} hours</span> of mat time</p>
+    </div>`);
+
+    insights.push(`<div class="flex items-start gap-3 mb-3">
+        <i data-lucide="clock" class="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"></i>
+        <p>Average session: <span class="text-white font-semibold">${avgDuration} min</span> at <span class="text-white font-semibold">${avgIntensity}/10</span> intensity</p>
+    </div>`);
+
+    if (favoriteType) {
+        insights.push(`<div class="flex items-start gap-3 mb-3">
+            <i data-lucide="star" class="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"></i>
+            <p>Most common: <span class="text-white font-semibold">${favoriteType[0]}</span> (${favoriteType[1]} sessions)</p>
+        </div>`);
+    }
+
+    insights.push(`<div class="flex items-start gap-3 mb-3">
+        <i data-lucide="calendar" class="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0"></i>
+        <p>Most active day: <span class="text-white font-semibold">${mostActiveDay}</span></p>
+    </div>`);
+
+    if (longestDuration > 0) {
+        insights.push(`<div class="flex items-start gap-3 mb-3">
+            <i data-lucide="trophy" class="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0"></i>
+            <p>Longest session: <span class="text-white font-semibold">${longestDuration} min</span></p>
+        </div>`);
+    }
+
+    if (highIntensitySessions > 0) {
+        insights.push(`<div class="flex items-start gap-3">
+            <i data-lucide="flame" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>
+            <p><span class="text-white font-semibold">${highIntensityPct}%</span> of sessions were high intensity (7+)</p>
+        </div>`);
+    }
+
+    container.innerHTML = `<h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Training Summary</h4>` + insights.join('');
+    
+    // Re-render icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
