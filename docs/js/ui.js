@@ -63,7 +63,13 @@ export function switchView(viewName) {
 
   // Menu button - only show on dashboard
   const menuBtn = document.getElementById('menu-btn');
-  if (menuBtn) viewName === 'dashboard' ? menuBtn.classList.remove('hidden') : menuBtn.classList.add('hidden');
+  if (menuBtn) {
+    if (viewName === 'dashboard') {
+      menuBtn.style.display = 'flex';
+    } else {
+      menuBtn.style.display = 'none';
+    }
+  }
 
   // Specific render triggers
     if (viewName === 'insights') {
@@ -688,9 +694,15 @@ export function initUI() {
         sidebarOverlay?.classList.add('hidden');
     };
     
+    const toggleSidebar = () => {
+        const isOpen = !sidebar?.classList.contains('-translate-x-full');
+        isOpen ? closeSidebar() : openSidebar();
+    };
+    
     menuBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        openSidebar();
+        e.preventDefault();
+        toggleSidebar();
     });
     
     // Close sidebar when clicking overlay or close button

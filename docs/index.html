@@ -31,7 +31,7 @@
     <div id="auth-error-banner" class="hidden fixed top-4 left-4 right-4 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl z-50 text-xs border border-red-500/20 backdrop-blur-md"></div>
     
     <!-- Left Sidebar Navigation -->
-    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-[100] transform -translate-x-full transition-transform duration-300 ease-out">
+    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-[100] transform -translate-x-full transition-transform duration-300 ease-out" style="will-change: transform;">
         <div class="p-6">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-xl font-black text-white">Menu</h2>
@@ -54,7 +54,7 @@
         </div>
     </aside>
     <!-- Sidebar Overlay -->
-    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-[90]"></div>
+    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-[90]" style="will-change: opacity;"></div>
     
     <!-- Header / Sync Status -->
     <header class="flex-none px-6 pt-6 pb-2 flex items-center z-10">
