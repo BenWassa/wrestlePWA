@@ -1,8 +1,9 @@
-const CACHE_NAME = 'gemini-static-v1';
+const CACHE_NAME = 'gemini-static-v2';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
   './style.css',
+  './tailwind.min.css',
   './js/app.js',
   './js/ui.js',
   './js/firebase.js',
