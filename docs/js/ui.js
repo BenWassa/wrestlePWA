@@ -61,7 +61,6 @@ export function switchView(viewName) {
         const sel = document.getElementById('select-range');
         const range = sel ? Number(sel.value) : 7;
         renderCharts(range);
-        renderHeatmap(state.sessions);
     }
 }
 
@@ -370,6 +369,9 @@ export function renderApp() {
         nextText.innerText = `${totalHrs.toFixed(1)} / ${level.next.hours} HRS`;
     }
     document.getElementById('total-hours').innerText = totalHrs.toFixed(1);
+
+    // Heatmap (Dashboard)
+    renderHeatmap(sessions);
 
     // Recent List (Top 3)
     const recentList = document.getElementById('recent-list');
