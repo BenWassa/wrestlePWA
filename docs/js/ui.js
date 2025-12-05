@@ -563,6 +563,35 @@ export function initUI() {
     const intInput = document.getElementById('inp-intensity');
     intInput?.addEventListener('input', (e) => document.getElementById('val-intensity').innerText = `${e.target.value}/10`);
 
+    // Hamburger Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    menuBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuDropdown?.classList.toggle('hidden');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!menuBtn?.contains(e.target) && !menuDropdown?.contains(e.target)) {
+            menuDropdown?.classList.add('hidden');
+        }
+    });
+    // Menu item handlers
+    const fileIn = document.getElementById('file-import');
+    document.getElementById('menu-import')?.addEventListener('click', () => {
+        menuDropdown?.classList.add('hidden');
+        fileIn?.click();
+    });
+    document.getElementById('menu-export')?.addEventListener('click', () => {
+        menuDropdown?.classList.add('hidden');
+        exportData();
+    });
+    document.getElementById('menu-about')?.addEventListener('click', () => {
+        menuDropdown?.classList.add('hidden');
+        showAboutModal();
+    });
+
     // FAB
     document.getElementById('fab')?.addEventListener('click', () => switchView('log'));
 
@@ -610,9 +639,7 @@ export function initUI() {
         document.getElementById('val-duration').innerText = "120";
     });
     
-    // Import Logic (Preserved, upgraded)
-    const fileIn = document.getElementById('file-import');
-    document.getElementById('btn-import')?.addEventListener('click', () => fileIn.click());
+    // Import Logic (file input handler - triggered via menu)
     fileIn?.addEventListener('change', async (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -693,6 +720,70 @@ export function initUI() {
                 showLevelsModal();
             });
         }
+}
+
+// Export Data Function
+function exportData() {
+    if (!state.sessions || !state.sessions.length) {
+        showToast('No data to export');
+        return;
+    }
+    const practices = state.sessions.map(s => {
+        const dateVal = s.date?.toDate ? s.date.toDate().getTime() : (typeof s.date === 'number' ? s.date : Date.parse(s.date) || Date.now());
+        return {
+            id: s.id || null,
+            date: dateVal,
+            type: s.sessionType || 'Practice',
+            duration: s.duration || 0,
+            intensity: s.intensity || 0,
+            physical: s.physicalFeel || 0,
+            mental: s.mentalFeel || 0,
+            notes: s.notes || '',
+            aiSummary: s.aiSummary || ''
+        };
+    });
+    const blob = new Blob([JSON.stringify({ practices, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `matmind_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Data exported!');
+}
+
+// About Modal Function
+function showAboutModal() {
+    // Create modal if not exists
+    let modal = document.getElementById('about-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'about-modal';
+        modal.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-slate-900 rounded-3xl border border-slate-800 p-6 max-w-sm mx-4 shadow-2xl">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xl font-black text-white">About MatMind</h2>
+                    <button id="close-about" class="text-slate-500 hover:text-white">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="space-y-3 text-sm text-slate-400">
+                    <p>MatMind is a training log for wrestlers to track practice sessions, monitor consistency, and level up their mat time.</p>
+                    <p class="text-slate-500">Version 2.0</p>
+                    <p class="text-slate-500">Built with ❤️ for the wrestling community</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        document.getElementById('close-about')?.addEventListener('click', () => modal.classList.add('hidden'));
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    }
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Toast Helper
