@@ -1,6 +1,19 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy, where, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  query,
+  orderBy,
+  where
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Safe parse of firebase config
 let firebaseConfig = null;
@@ -31,13 +44,11 @@ if (!firebaseConfig) {
 if (firebaseConfig) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
-  try {
-    enableIndexedDbPersistence(db);
-  } catch (err) {
-    // enableIndexedDbPersistence may fail if multiple tabs or on unsupported browsers
-    console.warn('IndexedDB persistence not enabled', err);
-  }
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
 } else {
   console.warn('Firebase not configured — running in offline/test mode. Firestore and Auth features will be disabled.');
 }
@@ -45,3 +56,4 @@ if (firebaseConfig) {
 const appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
 
 export { app, auth, db, appId, serverTimestamp, signInAnonymously, signInWithCustomToken, onAuthStateChanged, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, where };
+
