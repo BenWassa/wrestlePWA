@@ -1,9 +1,14 @@
-/* Base Resets */
+/*
+ * MatMind PWA - Unified Stylesheet
+ * This file contains custom styles that extend Tailwind CSS.
+ * Tailwind utilities are loaded from tailwind.min.css
+ */
+
+/* ============================================
+   BASE RESETS & VARIABLES
+   ============================================ */
 :root {
-  --safe-bottom: env(safe-area-inset-bottom);
-  --heatmap-col-gap: 6px;
-  --heatmap-pad: 8px;
-  --heatmap-max-width: 220px;
+    --safe-bottom: env(safe-area-inset-bottom);
 }
 
 body { 
@@ -11,100 +16,133 @@ body {
     -webkit-tap-highlight-color: transparent; 
 }
 
-/* === MISSING TAILWIND UTILITIES FOR SIDEBAR === */
-
-/* Transform utilities for sidebar off-screen positioning */
-.-translate-x-full {
-    transform: translateX(-100%) !important;
+/* ============================================
+   SIDEBAR STYLES
+   ============================================ */
+#sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 16rem;
+    background-color: rgb(15 23 42);
+    border-right: 1px solid rgb(30 41 59);
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-out;
+    will-change: transform;
 }
 
-/* Z-index utilities for layering - Multiple selector formats for compatibility */
-.z-100,
-.z-\[100\] {
-    z-index: 100 !important;
+#sidebar.open {
+    transform: translateX(0);
 }
 
-.z-90,
-.z-\[90\] {
-    z-index: 90 !important;
+#sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+    display: none;
 }
 
-.z-80,
-.z-\[80\] {
-    z-index: 80 !important;
+#sidebar-overlay.show {
+    display: block;
 }
 
-.z-70,
-.z-\[70\] {
-    z-index: 70 !important;
-}
-
-.z-60,
-.z-\[60\] {
-    z-index: 60 !important;
-}
-
-.z-50,
-.z-\[50\] {
-    z-index: 50 !important;
-}
-
-.z-40,
-.z-\[40\] {
-    z-index: 40 !important;
-}
-
-.z-10,
-.z-\[10\] {
-    z-index: 10 !important;
-}
-
-/* Transform origin and transition utilities */
-.transform {
-    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-
-.transition-transform {
-    transition-property: transform;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-}
-
-.duration-300 {
-    transition-duration: 300ms;
-}
-
-.ease-out {
-    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
-}
-
-/* Negative margins for nav button positioning */
-.-mt-8 {
-    margin-top: -2rem !important;
-}
-
-/* Visibility utilities */
-.hidden {
-    display: none !important;
-}
-
-/* Safe area padding for mobile notches/home indicator */
-.safe-bottom {
+/* ============================================
+   BOTTOM NAVIGATION BAR
+   ============================================ */
+#bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5rem;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 50;
 }
 
-/* Scrollbar Hiding */
+.nav-btn-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(51, 65, 85, 0.4);
+    color: rgb(100 116 139);
+    transition: all 0.15s;
+}
+
+.nav-btn-side:hover {
+    color: rgb(203 213 225);
+    background: rgba(51, 65, 85, 0.5);
+}
+
+.nav-btn-side.active {
+    color: rgb(245 158 11);
+}
+
+.nav-btn-center {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 9999px;
+    background: linear-gradient(to bottom right, rgb(245 158 11), rgb(217 119 6));
+    border: 2px solid rgba(251, 191, 36, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.3);
+    transition: all 0.15s;
+}
+
+.nav-btn-center:hover {
+    box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.5);
+}
+
+.nav-btn-center:active {
+    transform: scale(0.95);
+}
+
+.nav-btn-center.active {
+    box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.5);
+}
+
+/* ============================================
+   FLOATING ACTION BUTTON
+   ============================================ */
+#fab {
+    position: fixed;
+    bottom: 6.5rem;
+    right: 1.25rem;
+    z-index: 40;
+}
+
+/* ============================================
+   SCROLLBAR & ANIMATIONS
+   ============================================ */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Animations */
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(10px); } 
     to { opacity: 1; transform: translateY(0); } 
 }
 .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-/* Custom Range Slider */
+/* ============================================
+   CUSTOM RANGE SLIDER
+   ============================================ */
 input[type=range]::-webkit-slider-thumb { 
     -webkit-appearance: none; 
     height: 24px; width: 24px; 
@@ -121,33 +159,31 @@ input[type=range]::-webkit-slider-runnable-track {
     border-radius: 4px;
 }
 
-/* --- Heatmap Upgrade (30-Day View) --- */
-
+/* ============================================
+   HEATMAP STYLES
+   ============================================ */
 .heatmap-card {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 16px;
-    max-width: 360px; /* Limits width so it doesn't stretch too wide */
-    margin: 0 auto;   /* Centers it */
+    max-width: 360px;
+    margin: 0 auto;
 }
 
-/* The grid container that holds both headers and rows */
 .heatmap-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-/* Common Grid Layout for Header and Rows */
 .heatmap-row-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 equal columns */
-    gap: 6px; /* Spacing between cells */
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
     justify-items: center;
 }
 
-/* Headers (S M T W T F S) */
 .heatmap-header-cell {
     color: #64748b;
     font-size: 10px;
@@ -157,15 +193,15 @@ input[type=range]::-webkit-slider-runnable-track {
     padding-bottom: 4px;
 }
 
-/* The Day Cells */
 .heatmap-cell {
-    width: 100%; /* Fills the grid column */
-    aspect-ratio: 1/1; /* Keeps them perfectly square */
+    width: 100%;
+    aspect-ratio: 1/1;
     border-radius: 4px;
-    background-color: #1e293b; /* Default empty state */
+    background-color: #1e293b;
     border: 1px solid rgba(255,255,255,0.02);
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
+    animation: popIn 0.3s backwards;
 }
 
 .heatmap-cell.has-data {
@@ -178,30 +214,22 @@ input[type=range]::-webkit-slider-runnable-track {
     z-index: 10;
 }
 
-/* Animation for loading */
-.heatmap-cell {
-    animation: popIn 0.3s backwards;
-}
 @keyframes popIn {
     from { opacity: 0; transform: scale(0.5); }
     to { opacity: 1; transform: scale(1); }
 }
 
-/* Week Row Container (Optional visual grouping) */
-.week-row-wrapper {
-    /* We don't need styling here, just a wrapper for the grid */
-    display: contents; 
-}
-
-/* Session card notes truncation */
+/* ============================================
+   SESSION CARD NOTES
+   ============================================ */
 .card-notes {
     display: -webkit-box;
-    -webkit-line-clamp: 4; /* show up to 4 lines */
+    -webkit-line-clamp: 4;
     line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 6.5rem; /* approx 4 lines */
+    max-height: 6.5rem;
 }
 .card-expanded .card-notes {
     -webkit-line-clamp: unset;
@@ -215,7 +243,9 @@ input[type=range]::-webkit-slider-runnable-track {
     font-size: 0.8rem;
 }
 
-/* Modal overlay */
+/* ============================================
+   MODAL STYLES
+   ============================================ */
 #modal-note {
     backdrop-filter: blur(4px);
 }
@@ -225,9 +255,9 @@ input[type=range]::-webkit-slider-runnable-track {
     overflow-y: auto;
 }
 
-/* --- Level / Rank Modal Styles --- */
-
-/* The timeline vertical line */
+/* ============================================
+   LEVEL/RANK TIMELINE
+   ============================================ */
 .level-timeline {
     position: relative;
     padding-left: 32px;
@@ -235,7 +265,7 @@ input[type=range]::-webkit-slider-runnable-track {
 .level-timeline::before {
     content: '';
     position: absolute;
-    left: 11px; /* Centers line with the 24px bullets */
+    left: 11px;
     top: 24px;
     bottom: 0;
     width: 2px;
@@ -243,14 +273,12 @@ input[type=range]::-webkit-slider-runnable-track {
     z-index: 0;
 }
 
-/* Individual Level Item */
 .level-item {
     position: relative;
     margin-bottom: 24px;
     z-index: 1;
 }
 
-/* The circle/icon on the timeline */
 .level-bullet {
     position: absolute;
     left: -32px;
@@ -265,15 +293,14 @@ input[type=range]::-webkit-slider-runnable-track {
     transition: all 0.3s ease;
 }
 
-/* States */
 .level-item.unlocked .level-bullet {
-    background: #10b981; /* Emerald */
+    background: #10b981;
     border-color: #10b981;
     color: #0f172a;
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 .level-item.current .level-bullet {
-    background: #f59e0b; /* Amber */
+    background: #f59e0b;
     border-color: #f59e0b;
     color: #0f172a;
     box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
@@ -284,7 +311,6 @@ input[type=range]::-webkit-slider-runnable-track {
     color: #334155;
 }
 
-/* Card appearance */
 .level-content {
     background: #1e293b;
     border: 1px solid rgba(255,255,255,0.05);

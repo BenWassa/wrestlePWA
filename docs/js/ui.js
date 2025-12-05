@@ -49,12 +49,7 @@ export function switchView(viewName) {
   // Update Nav State
   document.querySelectorAll('.nav-btn').forEach(btn => {
       const isActive = btn.dataset.target === viewName;
-      // Special styling for center dashboard button (circle)
-      if (btn.dataset.target === 'dashboard') {
-          btn.className = `nav-btn w-14 h-14 -mt-8 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center transition-colors shadow-lg ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
-      } else {
-          btn.className = `nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
-      }
+      btn.classList.toggle('active', isActive);
   });
 
   // FAB logic
@@ -684,20 +679,18 @@ export function initUI() {
     const sidebarClose = document.getElementById('sidebar-close');
     
     const openSidebar = () => {
-        sidebar?.classList.remove('-translate-x-full');
-        sidebar?.style.setProperty('transform', 'translateX(0)', 'important');
-        sidebarOverlay?.classList.remove('hidden');
+        sidebar?.classList.add('open');
+        sidebarOverlay?.classList.add('show');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
     
     const closeSidebar = () => {
-        sidebar?.classList.add('-translate-x-full');
-        sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
-        sidebarOverlay?.classList.add('hidden');
+        sidebar?.classList.remove('open');
+        sidebarOverlay?.classList.remove('show');
     };
     
     const toggleSidebar = () => {
-        const isOpen = !sidebar?.classList.contains('-translate-x-full');
+        const isOpen = sidebar?.classList.contains('open');
         isOpen ? closeSidebar() : openSidebar();
     };
     
