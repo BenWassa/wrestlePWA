@@ -49,7 +49,12 @@ export function switchView(viewName) {
   // Update Nav State
   document.querySelectorAll('.nav-btn').forEach(btn => {
       const isActive = btn.dataset.target === viewName;
-      btn.className = `nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
+      // Special styling for center dashboard button (circle)
+      if (btn.dataset.target === 'dashboard') {
+          btn.className = `nav-btn w-14 h-14 -mt-8 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center transition-colors shadow-lg ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
+      } else {
+          btn.className = `nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors ${isActive ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}`;
+      }
   });
 
   // FAB logic
