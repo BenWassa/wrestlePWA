@@ -685,12 +685,14 @@ export function initUI() {
     
     const openSidebar = () => {
         sidebar?.classList.remove('-translate-x-full');
+        sidebar?.style.setProperty('transform', 'translateX(0)', 'important');
         sidebarOverlay?.classList.remove('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
     
     const closeSidebar = () => {
         sidebar?.classList.add('-translate-x-full');
+        sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
         sidebarOverlay?.classList.add('hidden');
     };
     
