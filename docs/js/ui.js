@@ -668,25 +668,27 @@ export function initUI() {
     const menuBtn = document.getElementById('menu-btn');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarClose = document.getElementById('sidebar-close');
     
-    menuBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sidebar?.classList.toggle('-translate-x-full');
-        sidebarOverlay?.classList.toggle('hidden');
+    const openSidebar = () => {
+        sidebar?.classList.remove('-translate-x-full');
+        sidebarOverlay?.classList.remove('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
+    };
     
-    // Close sidebar when clicking overlay
-    sidebarOverlay?.addEventListener('click', () => {
-        sidebar?.classList.add('-translate-x-full');
-        sidebarOverlay?.classList.add('hidden');
-    });
-    
-    // Close sidebar when clicking a menu item
     const closeSidebar = () => {
         sidebar?.classList.add('-translate-x-full');
         sidebarOverlay?.classList.add('hidden');
     };
+    
+    menuBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSidebar();
+    });
+    
+    // Close sidebar when clicking overlay or close button
+    sidebarOverlay?.addEventListener('click', closeSidebar);
+    sidebarClose?.addEventListener('click', closeSidebar);
     
     // Menu item handlers
     const fileIn = document.getElementById('file-import');
