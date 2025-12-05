@@ -11,6 +11,77 @@ body {
     -webkit-tap-highlight-color: transparent; 
 }
 
+/* === MISSING TAILWIND UTILITIES FOR SIDEBAR === */
+
+/* Transform utilities for sidebar off-screen positioning */
+.-translate-x-full {
+    transform: translateX(-100%);
+}
+
+/* Z-index utilities for layering */
+.z-\[100\] {
+    z-index: 100;
+}
+
+.z-\[90\] {
+    z-index: 90;
+}
+
+.z-\[80\] {
+    z-index: 80;
+}
+
+.z-\[70\] {
+    z-index: 70;
+}
+
+.z-\[60\] {
+    z-index: 60;
+}
+
+.z-\[50\] {
+    z-index: 50;
+}
+
+.z-\[40\] {
+    z-index: 40;
+}
+
+.z-\[10\] {
+    z-index: 10;
+}
+
+/* Transform origin and transition utilities */
+.transform {
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.duration-300 {
+    transition-duration: 300ms;
+}
+
+.ease-out {
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Negative margins for nav button positioning */
+.-mt-8 {
+    margin-top: -2rem;
+}
+
+/* Visibility utilities */
+.hidden {
+    display: none;
+}
+
+/* === END SIDEBAR UTILITIES === */
+
 /* Scrollbar Hiding */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
