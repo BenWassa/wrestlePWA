@@ -63,7 +63,7 @@ export function switchView(viewName) {
 
   // Menu button - only show on dashboard
   const menuBtn = document.getElementById('menu-btn');
-  if (menuBtn) viewName === 'dashboard' ? menuBtn.classList.remove('hidden', 'invisible') : menuBtn.classList.add('invisible');
+  if (menuBtn) viewName === 'dashboard' ? menuBtn.classList.remove('hidden') : menuBtn.classList.add('hidden');
 
   // Specific render triggers
     if (viewName === 'insights') {
@@ -426,6 +426,9 @@ export function renderApp() {
 
     // Update Date in Header
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+    // Ensure initial view state
+    switchView('dashboard');
 }
 
 function computeWeeklyStreak(sessions) {
