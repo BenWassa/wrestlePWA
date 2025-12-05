@@ -88,7 +88,10 @@ body {
     display: none !important;
 }
 
-/* === END SIDEBAR UTILITIES === */
+/* Safe area padding for mobile notches/home indicator */
+.safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
 
 /* Scrollbar Hiding */
 .hide-scrollbar::-webkit-scrollbar { display: none; }

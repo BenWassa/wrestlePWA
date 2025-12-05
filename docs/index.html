@@ -57,27 +57,27 @@
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-90" style="will-change: opacity;"></div>
     
     <!-- Header / Sync Status -->
-    <header class="flex-none px-6 pt-6 pb-2 flex items-center z-10">
-        <button id="menu-btn" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-900/50 border border-slate-800 hover:bg-slate-800 transition-all">
+    <header class="flex-none px-6 pt-4 pb-3 flex items-center z-10 bg-slate-950/40 backdrop-blur-lg border-b border-slate-800/50">
+        <button id="menu-btn" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-900/40 border border-slate-700/50 hover:bg-slate-800/60 backdrop-blur-md transition-all">
             <i data-lucide="menu" class="w-5 h-5 text-slate-400"></i>
         </button>
         <div class="flex-1 text-center">
             <h1 class="text-xl font-black text-white tracking-tight">MAT<span class="text-amber-500">MIND</span></h1>
             <p id="current-date" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Loading...</p>
         </div>
-        <div id="sync-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800 backdrop-blur-sm transition-all">
+        <div id="sync-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/40 border border-slate-700/50 backdrop-blur-md transition-all">
             <div class="w-2 h-2 rounded-full bg-slate-500"></div>
             <span class="text-[10px] font-bold text-slate-400">OFFLINE</span>
         </div>
     </header>
 
     <!-- Main Scrollable Area -->
-    <main id="app-container" class="flex-1 overflow-y-auto hide-scrollbar relative w-full max-w-lg mx-auto pb-32 px-4 space-y-8">
+    <main id="app-container" class="flex-1 overflow-y-auto hide-scrollbar relative w-full max-w-lg mx-auto pb-24 px-4 space-y-8">
         <!-- VIEW: Dashboard -->
         <div id="view-dashboard" class="space-y-6 animate-fade-in pt-2">
             
             <!-- Rank Card (Fully clickable) -->
-            <div id="rank-card" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border border-slate-800 p-6 shadow-2xl cursor-pointer group transition-transform active:scale-[0.98]">
+            <div id="rank-card" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900/60 via-slate-900/50 to-slate-800/40 border border-slate-700/50 backdrop-blur-md p-6 shadow-2xl cursor-pointer group transition-all active:scale-[0.98] hover:border-slate-700">
                 <!-- Background Decoration -->
                 <div class="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all"></div>
                 
@@ -109,11 +109,11 @@
 
             <!-- Quick Stats Row -->
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm">
+                <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md hover:bg-slate-900/60 transition-all">
                     <div class="text-slate-500 text-[10px] font-bold uppercase mb-2">7-Day Volume</div>
                     <div class="text-2xl font-black text-white" id="weekly-hours">0.0<span class="text-sm font-medium text-slate-500 ml-1">hrs</span></div>
                 </div>
-                <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm">
+                <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md hover:bg-slate-900/60 transition-all">
                     <div class="text-slate-500 text-[10px] font-bold uppercase mb-2">Weekly Streak</div>
                     <div class="text-2xl font-black text-white" id="weekly-streak">0<span class="text-sm font-medium text-slate-500 ml-1">weeks</span></div>
                 </div>
@@ -317,17 +317,17 @@
     </button>
 
     <!-- Glass Navigation Bar -->
-    <nav class="fixed bottom-6 left-4 right-4 h-16 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl flex items-center justify-around px-2 shadow-2xl z-50">
-        <button class="nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-300 transition-colors" data-target="journal">
+    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-slate-950/70 backdrop-blur-xl border-t border-slate-800/50 flex items-center justify-center gap-2 px-4 shadow-2xl z-50 safe-bottom">
+        <button class="nav-btn flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800/40 border border-slate-700/40 text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 backdrop-blur transition-all" data-target="journal">
             <i data-lucide="book" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold">LOGS</span>
+            <span class="text-xs font-bold hidden sm:inline">LOGS</span>
         </button>
-        <button class="nav-btn w-14 h-14 -mt-8 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center text-amber-500 transition-colors shadow-lg" data-target="dashboard">
+        <button class="nav-btn w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-400/30 flex items-center justify-center text-white transition-all shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 active:scale-95" data-target="dashboard">
             <i data-lucide="home" class="w-6 h-6"></i>
         </button>
-        <button class="nav-btn flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-300 transition-colors" data-target="insights">
+        <button class="nav-btn flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800/40 border border-slate-700/40 text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 backdrop-blur transition-all" data-target="insights">
             <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold">STATS</span>
+            <span class="text-xs font-bold hidden sm:inline">STATS</span>
         </button>
     </nav>
 
