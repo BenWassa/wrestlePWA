@@ -61,6 +61,10 @@ export function switchView(viewName) {
   const fab = document.getElementById('fab');
   if (fab) viewName === 'log' ? fab.classList.add('hidden') : fab.classList.remove('hidden');
 
+  // Menu button - only show on dashboard
+  const menuBtn = document.getElementById('menu-btn');
+  if (menuBtn) viewName === 'dashboard' ? menuBtn.classList.remove('hidden', 'invisible') : menuBtn.classList.add('invisible');
+
   // Specific render triggers
     if (viewName === 'insights') {
         const sel = document.getElementById('select-range');
