@@ -442,6 +442,121 @@ function initExport(logs) {
   });
 }
 
+// Menu
+
+function initMenu() {
+  const toggle = document.getElementById("menuToggle");
+  const sheet = document.getElementById("appMenu");
+  const modal = document.getElementById("menuModal");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  const closeModalBtn = document.getElementById("closeModalBtn");
+
+  if (!toggle || !sheet || !modal || !modalTitle || !modalBody || !closeModalBtn) return;
+
+  const modalContent = {
+    settings: {
+      title: "Settings",
+      body: `
+        <p>Quick controls for the app experience.</p>
+        <ul>
+          <li>Offline first: everything is stored locally in your browser.</li>
+          <li>Export raw log any time from the Review tab.</li>
+          <li>Weekly target is set to 4 sessions; adjust it in code if you prefer a different cadence.</li>
+        </ul>
+      `
+    },
+    about: {
+      title: "About MatMind",
+      body: `
+        <p>MatMind is a lightweight, offline-first journal built for wrestlers to capture sessions quickly and spot patterns without clutter.</p>
+        <p>No accounts or sync required. Log after practice, review trends, and adjust one habit at a time.</p>
+      `
+    },
+    support: {
+      title: "Feedback",
+      body: `
+        <p>Spotted a bug or have an idea?</p>
+        <ul>
+          <li>Jot notes in your log so they stay with your data.</li>
+          <li>Use the JSON export to share details or move logs elsewhere.</li>
+          <li>For a clean slate, clear this site's storage in your browser settings.</li>
+        </ul>
+      `
+    }
+  };
+
+  const closeMenu = () => {
+    sheet.classList.add("hidden");
+    toggle.setAttribute("aria-expanded", "false");
+  };
+
+  const openMenu = () => {
+    sheet.classList.remove("hidden");
+    toggle.setAttribute("aria-expanded", "true");
+    const firstItem = sheet.querySelector(".menu-item");
+    if (firstItem) {
+      setTimeout(() => firstItem.focus(), 0);
+    }
+  };
+
+  const closeModal = () => {
+    modal.classList.add("hidden");
+  };
+
+  const openModal = (key) => {
+    const content = modalContent[key];
+    if (!content) return;
+    modalTitle.textContent = content.title;
+    modalBody.innerHTML = content.body;
+    modal.classList.remove("hidden");
+    setTimeout(() => closeModalBtn.focus(), 0);
+  };
+
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (sheet.classList.contains("hidden")) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  });
+
+  sheet.addEventListener("click", (e) => {
+    const btn = e.target.closest(".menu-item");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    closeMenu();
+    openModal(action);
+  });
+
+  closeModalBtn.addEventListener("click", () => {
+    closeModal();
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-backdrop")) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!sheet.classList.contains("hidden")) {
+      const isClickInsideMenu = sheet.contains(e.target) || toggle.contains(e.target);
+      if (!isClickInsideMenu) {
+        closeMenu();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeMenu();
+      closeModal();
+    }
+  });
+}
+
 // PWA install prompt
 
 let deferredPrompt = null;
@@ -486,6 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initForm(logs);
   initExport(logs);
+  initMenu();
   initInstallPrompt();
   initServiceWorker();
 

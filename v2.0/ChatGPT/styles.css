@@ -62,6 +62,12 @@ body {
   gap: 2px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .app-title {
   margin: 0;
   font-size: 1.3rem;
@@ -102,6 +108,17 @@ body {
   opacity: 0.7;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 /* Buttons and controls */
 
 .pill-button,
@@ -116,6 +133,85 @@ body {
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast),
     background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(24, 28, 48, 0.9);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-button.small {
+  width: 32px;
+  height: 32px;
+}
+
+.icon-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(68, 196, 255, 0.5);
+  color: var(--accent);
+}
+
+.hamburger {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+  transition: background-color var(--transition-fast);
+}
+
+.menu-wrapper {
+  position: relative;
+}
+
+.menu-sheet {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 190px;
+  background: rgba(10, 14, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  box-shadow: var(--shadow-subtle);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 12;
+}
+
+.menu-item {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: rgba(68, 196, 255, 0.12);
+  color: var(--accent);
+  outline: none;
 }
 
 .pill-button {
@@ -452,4 +548,66 @@ input[type="range"] {
   .app-main {
     padding: 14px 18px 80px;
   }
+}
+
+/* Modal */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+.modal-content {
+  position: relative;
+  width: min(520px, calc(100% - 32px));
+  background: linear-gradient(150deg, rgba(16, 20, 38, 0.98), rgba(10, 14, 30, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-xl);
+  padding: 14px 14px 12px;
+  box-shadow: var(--shadow-soft);
+  z-index: 1;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.modal-body {
+  font-size: 0.92rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.modal-body p {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+}
+
+.modal-body ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
 }

@@ -17,7 +17,24 @@
       <h1 class="app-title">MatMind</h1>
       <p class="app-subtitle">Second brain for the mat</p>
     </div>
-    <button id="installBtn" class="pill-button hidden">Install</button>
+    <div class="header-actions">
+      <button id="installBtn" class="pill-button hidden">Install</button>
+      <div class="menu-wrapper">
+        <button id="menuToggle" class="icon-button" aria-expanded="false" aria-controls="appMenu" aria-label="Open menu">
+          <span class="sr-only">Open menu</span>
+          <span class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+        <div id="appMenu" class="menu-sheet hidden" role="menu" aria-label="App menu">
+          <button class="menu-item" data-action="settings" role="menuitem">Settings</button>
+          <button class="menu-item" data-action="about" role="menuitem">About MatMind</button>
+          <button class="menu-item" data-action="support" role="menuitem">Feedback</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <nav class="tabs">
@@ -173,6 +190,17 @@
     <span id="footerSessions">0 sessions logged</span>
     <span class="footer-note">Offline first. Data stays on this device.</span>
   </footer>
+
+  <section id="menuModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h3 id="modalTitle" class="modal-title"></h3>
+        <button id="closeModalBtn" class="icon-button small" aria-label="Close menu">×</button>
+      </header>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </section>
 
   <script src="app.js"></script>
 </body>
