@@ -664,32 +664,42 @@ export function initUI() {
     const intInput = document.getElementById('inp-intensity');
     intInput?.addEventListener('input', (e) => document.getElementById('val-intensity').innerText = `${e.target.value}/10`);
 
-    // Hamburger Menu Toggle
+    // Sidebar Navigation Toggle
     const menuBtn = document.getElementById('menu-btn');
-    const menuDropdown = document.getElementById('menu-dropdown');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    
     menuBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        menuDropdown?.classList.toggle('hidden');
+        sidebar?.classList.toggle('-translate-x-full');
+        sidebarOverlay?.classList.toggle('hidden');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     });
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!menuBtn?.contains(e.target) && !menuDropdown?.contains(e.target)) {
-            menuDropdown?.classList.add('hidden');
-        }
+    
+    // Close sidebar when clicking overlay
+    sidebarOverlay?.addEventListener('click', () => {
+        sidebar?.classList.add('-translate-x-full');
+        sidebarOverlay?.classList.add('hidden');
     });
+    
+    // Close sidebar when clicking a menu item
+    const closeSidebar = () => {
+        sidebar?.classList.add('-translate-x-full');
+        sidebarOverlay?.classList.add('hidden');
+    };
+    
     // Menu item handlers
     const fileIn = document.getElementById('file-import');
     document.getElementById('menu-import')?.addEventListener('click', () => {
-        menuDropdown?.classList.add('hidden');
+        closeSidebar();
         fileIn?.click();
     });
     document.getElementById('menu-export')?.addEventListener('click', () => {
-        menuDropdown?.classList.add('hidden');
+        closeSidebar();
         exportData();
     });
     document.getElementById('menu-about')?.addEventListener('click', () => {
-        menuDropdown?.classList.add('hidden');
+        closeSidebar();
         showAboutModal();
     });
 
